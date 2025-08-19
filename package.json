@@ -1,0 +1,41 @@
+{
+  "name": "tiledash",
+  "version": "1.0.0",
+  "description": "A Homey dashboard with tile-based interface",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run build:watch\" \"npm run start:server\" \"npm run dev:client\"",
+    "dev:client": "vite --host --port 3000",
+    "build:watch": "tsc --watch",
+    "serve": "vite preview --host --port 4173",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "db:init": "node scripts/seed.js",
+    "start:server": "node server.js",
+    "lint": "eslint . --ext ts,js,html --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --ext ts,js,html --fix"
+  },
+  "keywords": [
+    "dashboard",
+    "homey",
+    "smart-home",
+    "tiles"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20.11.17",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "concurrently": "^8.2.2",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.1.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.0",
+    "dotenv": "^17.2.1",
+    "express": "^4.18.2"
+  }
+}
