@@ -10,6 +10,9 @@ export class TileRenderer {
   private container: HTMLElement | null;
   private homeyClient: HomeyClient;
   private tiles: Map<string, BaseTile> = new Map();
+  private currentPageIndex: number = 0;
+  private pages: DashboardPage[] = [];
+  private deviceMap: Map<string, HomeyDevice> = new Map();
 
   constructor(containerId: string, homeyClient: HomeyClient) {
     console.log('TileRenderer: Constructor called with containerId:', containerId);
@@ -21,6 +24,30 @@ export class TileRenderer {
     } else {
       console.log('TileRenderer: Container found successfully', this.container);
     }
+
+    // Add keyboard navigation support
+    this.setupKeyboardNavigation();
+  }
+
+  /**
+   * Set up keyboard navigation (arrow keys for page switching)
+   */
+  private setupKeyboardNavigation(): void {
+    document.addEventListener('keydown', (event) => {
+      // Only handle navigation if we have multiple pages
+      if (this.pages.length <= 1) return;
+
+      switch (event.key) {
+        case 'ArrowLeft':
+          event.preventDefault();
+          this.previousPage();
+          break;
+        case 'ArrowRight':
+          event.preventDefault();
+          this.nextPage();
+          break;
+      }
+    });
   }
 
   /**
@@ -223,25 +250,32 @@ export class TileRenderer {
       return;
     }
 
+    // Store pages and devices for navigation
+    this.pages = pages;
+    this.currentPageIndex = 0;
+    
     // Clear existing content
     this.clearAllTiles();
     
     // Convert devices array to map for efficient lookup
-    const deviceMap = new Map<string, HomeyDevice>();
+    this.deviceMap.clear();
     devices.forEach(device => {
-      deviceMap.set(device.id, device);
+      this.deviceMap.set(device.id, device);
     });
 
     // Set up the main dashboard container
     this.container.innerHTML = '';
     this.container.className = 'dashboard-container';
 
-    // For now, render the first page (multi-page support can be added later)
-    if (pages.length > 0) {
-      this.renderPage(pages[0], deviceMap, 0);
-    } else {
-      console.warn('No pages to render in dashboard');
+    // Create navigation if there are multiple pages with icons
+    if (pages.length > 1 && pages.some(page => page.icon)) {
+      this.createNavigation(pages);
     }
+
+    // Render all pages (hidden except first one)
+    pages.forEach((page, pageIndex) => {
+      this.renderPage(page, this.deviceMap, pageIndex);
+    });
 
     console.log(`🎨 Dashboard rendered with ${this.tiles.size} total tiles`);
   }
@@ -263,11 +297,10 @@ export class TileRenderer {
 
     // Create page container
     const pageContainer = document.createElement('div');
-    pageContainer.className = 'page';
+    pageContainer.className = 'dashboard-page page';
     pageContainer.id = `page-${pageIndex}`;
-    // TODO better styles via css
     pageContainer.style.cssText = `
-      display: grid;
+      display: ${pageIndex === 0 ? 'grid' : 'none'};
       gap: 16px;
       padding: 16px;
       width: 100%;
@@ -351,6 +384,120 @@ export class TileRenderer {
     parentContainer.appendChild(groupContainer);
 
     console.log(`📦 Rendered group ${groupIndex} with ${group.items.length} tiles`);
+  }
+
+  /**
+   * Create navigation bar for multi-page dashboards
+   */
+  private createNavigation(pages: DashboardPage[]): void {
+    if (!this.container) return;
+
+    // Create navigation container
+    const navPage = document.createElement('div');
+    navPage.id = 'navPage';
+    navPage.className = 'nav-page';
+    
+    // Check orientation for responsive design
+    const orientation = window.innerHeight > window.innerWidth ? 'portrait' : 'landscape';
+    if (orientation === 'portrait') {
+      navPage.classList.add('portrait');
+    }
+
+    // Create page button container
+    const pageButtonContainer = document.createElement('div');
+    pageButtonContainer.id = 'pageButtonContainer';
+    pageButtonContainer.className = 'page-button-container';
+    if (orientation === 'portrait') {
+      pageButtonContainer.classList.add('portrait');
+    }
+
+    // Create page buttons
+    pages.forEach((page, pageIndex) => {
+      if (page.icon) {
+        const pageButton = document.createElement('div');
+        pageButton.id = `pageButton-${pageIndex}`;
+        pageButton.className = 'pageButton';
+        pageButton.dataset.targetPage = pageIndex.toString();
+        
+        // Set active for first page
+        if (pageIndex === 0) {
+          pageButton.classList.add('active');
+        }
+
+        // Add click handler
+        pageButton.addEventListener('click', () => {
+          this.navigateToPage(pageIndex);
+        });
+
+        // Create icon
+        const pageIcon = document.createElement('div');
+        pageIcon.className = `pageIcon mdi ${page.icon}`;
+
+        pageButton.appendChild(pageIcon);
+        pageButtonContainer.appendChild(pageButton);
+      }
+    });
+
+    navPage.appendChild(pageButtonContainer);
+    this.container.appendChild(navPage);
+
+    console.log('🧭 Navigation created with', pages.length, 'page buttons');
+  }
+
+  /**
+   * Navigate to a specific page
+   */
+  private navigateToPage(targetPageIndex: number): void {
+    console.log(`🧭 Navigating to page ${targetPageIndex}`);
+
+    // Update active button
+    const allPageButtons = document.querySelectorAll('.pageButton');
+    allPageButtons.forEach((button, index) => {
+      if (index === targetPageIndex) {
+        button.classList.add('active');
+      } else {
+        button.classList.remove('active');
+      }
+    });
+
+    // Show/hide pages
+    const allPages = document.querySelectorAll('.page');
+    allPages.forEach((page, index) => {
+      const pageElement = page as HTMLElement;
+      if (index === targetPageIndex) {
+        pageElement.style.display = 'grid';
+      } else {
+        pageElement.style.display = 'none';
+      }
+    });
+
+    this.currentPageIndex = targetPageIndex;
+    console.log(`✅ Navigated to page ${targetPageIndex}`);
+  }
+
+  /**
+   * Get current page index
+   */
+  public getCurrentPageIndex(): number {
+    return this.currentPageIndex;
+  }
+
+  /**
+   * Switch to next page
+   */
+  public nextPage(): void {
+    if (this.currentPageIndex < this.pages.length - 1) {
+      this.navigateToPage(this.currentPageIndex + 1);
+    }
+  }
+
+  /**
+   * Switch to previous page
+   */
+  public previousPage(): void {
+    if (this.currentPageIndex > 0) {
+      this.navigateToPage(this.currentPageIndex - 1);
+    }
   }
 
   /**
