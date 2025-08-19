@@ -1,5 +1,6 @@
-import { DashboardConfig } from './types.js';
-import { DashboardUtils, LocalStorageManager, URLManager, DeviceStateManager } from './utils.js';
+import { DashboardConfig } from './types';
+import { DashboardUtils, LocalStorageManager, URLManager, DeviceStateManager } from './utils';
+import { developmentConfig } from './config/development';
 
 declare global {
   interface Window {
@@ -63,39 +64,8 @@ class TileDashApp {
   }
 
   private getDefaultConfig(): DashboardConfig {
-    return {
-      settings: {
-        tileSize: 80,
-        tileMargin: 5,
-        groupMargin: 10,
-        orientation: 'landscape',
-        dateLocal: 'en-EN',
-        iconSize: 40,
-        customText: 'TileDash'
-      },
-      dashboard: [
-        {
-          icon: 'mdi-home',
-          group: [
-            {
-              title: 'Welcome',
-              width: 4,
-              height: 3,
-              items: [
-                {
-                  position: [0, 0],
-                  type: 'VIRTUAL',
-                  width: 4,
-                  height: 3,
-                  icon: 'mdi-home',
-                  name: 'Welcome to TileDash'
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    };
+    // Use the imported development configuration
+    return developmentConfig;
   }
 
   private initializeTheme(): void {

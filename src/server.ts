@@ -1,8 +1,8 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import dotenv from 'dotenv';
-import db, { queries } from './dist/database.js';
+import { queries } from './server-database';
 
 // Load environment variables
 dotenv.config();
@@ -17,13 +17,13 @@ app.use( express.static( '.' ) );
 // API Routes
 
 // Get dashboard configuration
-app.get( '/api/dashboard/config', ( _req, res ) => {
+app.get( '/api/dashboard/config', ( _req: Request, res: Response ) => {
   try {
-    const activeConfig = queries.getActiveDashboardConfig.get();
+    const activeConfig = queries.getDashboardConfig.get( 'default' ) as { config: string } | undefined;
     if ( activeConfig ) {
       res.json( JSON.parse( activeConfig.config ) );
     } else {
-      res.status( 404 ).json( { error: 'No active dashboard configuration found' } );
+      res.status( 404 ).json( { error: 'No dashboard configuration found' } );
     }
   } catch ( error ) {
     console.error( 'Error getting dashboard config:', error );
@@ -32,13 +32,12 @@ app.get( '/api/dashboard/config', ( _req, res ) => {
 } );
 
 // Save dashboard configuration
-app.post( '/api/dashboard/config', ( req, res ) => {
+app.post( '/api/dashboard/config', ( req: Request, res: Response ) => {
   try {
     const config = req.body;
-    const configName = req.query.name || 'default';
+    const configName = req.query.name as string || 'default';
     
-    queries.saveDashboardConfig.run( configName, JSON.stringify( config ), 1 );
-    queries.setActiveDashboard.run( configName );
+    queries.saveDashboardConfig.run( configName, JSON.stringify( config ) );
     
     res.json( { success: true } );
   } catch ( error ) {
@@ -48,11 +47,11 @@ app.post( '/api/dashboard/config', ( req, res ) => {
 } );
 
 // Log device changes
-app.post( '/api/devices/log', ( req, res ) => {
+app.post( '/api/devices/log', ( req: Request, res: Response ) => {
   try {
-    const { device_id, device_name, capability_id, old_value, new_value } = req.body;
+    const { device_id, capability_id, old_value, new_value } = req.body;
     
-    queries.logDeviceChange.run( device_id, device_name || null, capability_id, old_value || null, new_value );
+    queries.logDeviceChange.run( device_id, capability_id, old_value || null, new_value );
     
     res.json( { success: true } );
   } catch ( error ) {
@@ -62,7 +61,7 @@ app.post( '/api/devices/log', ( req, res ) => {
 } );
 
 // Get device history
-app.get( '/api/devices/:deviceId/history', ( req, res ) => {
+app.get( '/api/devices/:deviceId/history', ( req: Request, res: Response ) => {
   try {
     const { deviceId } = req.params;
     const { capabilityId, limit = '100' } = req.query;
@@ -71,7 +70,7 @@ app.get( '/api/devices/:deviceId/history', ( req, res ) => {
       return res.status( 400 ).json( { error: 'capabilityId parameter is required' } );
     }
     
-    const history = queries.getDeviceHistory.all( deviceId, capabilityId, parseInt( limit ) );
+    const history = queries.getDeviceLogs.all( deviceId, parseInt( limit as string ) );
     res.json( history );
   } catch ( error ) {
     console.error( 'Error getting device history:', error );
@@ -80,10 +79,10 @@ app.get( '/api/devices/:deviceId/history', ( req, res ) => {
 } );
 
 // Get settings
-app.get( '/api/settings/:key', ( req, res ) => {
+app.get( '/api/settings/:key', ( req: Request, res: Response ) => {
   try {
     const { key } = req.params;
-    const setting = queries.getSetting.get( key );
+    const setting = queries.getSetting.get( key ) as { value: string } | undefined;
     
     if ( setting ) {
       res.json( { key, value: setting.value } );
@@ -97,7 +96,7 @@ app.get( '/api/settings/:key', ( req, res ) => {
 } );
 
 // Set settings
-app.put( '/api/settings/:key', ( req, res ) => {
+app.put( '/api/settings/:key', ( req: Request, res: Response ) => {
   try {
     const { key } = req.params;
     const { value } = req.body;
@@ -111,25 +110,25 @@ app.put( '/api/settings/:key', ( req, res ) => {
 } );
 
 // Health check
-app.get( '/api/health', ( _req, res ) => {
+app.get( '/api/health', ( _req: Request, res: Response ) => {
   res.json( { status: 'ok', timestamp: new Date().toISOString() } );
 } );
 
 // Get environment token
-app.get( '/api/env/token', ( _req, res ) => {
+app.get( '/api/env/token', ( _req: Request, res: Response ) => {
   const token = process.env.HOMEY_TOKEN;
   res.json( { token: token || null } );
 } );
 
 // Serve main HTML file for all non-API routes
-app.get( '*', ( _req, res ) => {
-  res.sendFile( join( __dirname, 'index.html' ) );
+app.get( '*', ( _req: Request, res: Response ) => {
+  res.sendFile( join( __dirname, '../index.html' ) );
 } );
 
 // Cleanup old logs periodically (every hour)
 setInterval( () => {
   try {
-    queries.cleanupOldLogs.run();
+    queries.cleanOldLogs.run();
     console.log( 'Old device logs cleaned up' );
   } catch ( error ) {
     console.error( 'Error cleaning up old logs:', error );
