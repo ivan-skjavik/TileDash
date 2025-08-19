@@ -90,6 +90,8 @@ export class TileRenderer {
       pageElement.appendChild( groupElement );
     } );
 
+    this.container?.appendChild( pageElement );
+    
     return pageElement;
   }
 

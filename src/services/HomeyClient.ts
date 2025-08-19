@@ -1,11 +1,13 @@
-import { AthomCloudAPI } from 'homey-api';
+import { AthomCloudAPI, HomeyAPIV3Local } from 'homey-api';
 import { HomeyDevice } from '../types';
 import { TokenStorage } from './TokenStorage';
 import { URLManager } from '../utils';
+import { HomeyAPIV3LocalPatched } from 'homey-api';
 
 export class HomeyClient {
   private api: AthomCloudAPI | null = null;
-  private homey: any = null;
+  private homeyApi: HomeyAPIV3LocalPatched | null = null;
+  private homey: AthomCloudAPI.Homey | null = null;
   private isConnected: boolean = false;
   private CLIENT_ID = '68a4480a49ea3fdd32f34e00'; // TODO store in .env
   private CLIENT_SECRET = '4976498ae7a1851c3e1abb3fa60eeb44'; // TODO store in .env
@@ -129,12 +131,21 @@ export class HomeyClient {
       // Get user and Homey
       const user = await this.api.getAuthenticatedUser();
       this.homey = await user.getFirstHomey();
+
+      // Authenticate with Homey using the local strategy
+      this.homeyApi = await this.homey.authenticate() as HomeyAPIV3LocalPatched;
+
+      console.log('homeyApi', this.homeyApi);
       
-      // Authenticate with Homey
-      await this.homey.authenticate();
-      
+
+    //   // Connect to Homey and wait for managers to be initialized
+    //   await this.homeyApi.connect();
+
       this.isConnected = true;
-      console.log( '✅ Successfully connected to Homey:', this.homey.name );
+      console.log( '✅ Successfully connected to Homey:', this.homey.id );
+      
+      // Log available properties to understand the API structure
+      console.log( '🔧 API properties:', Object.getOwnPropertyNames(this.homeyApi).filter(prop => !prop.startsWith('_')) );
       
       return true;
       
@@ -146,27 +157,27 @@ export class HomeyClient {
     }
   }
 
-  async getDevices(): Promise<HomeyDevice[]> {
-    if ( !this.isConnected || !this.homey ) {
+  async getDevices(): Promise<HomeyAPIV3Local.ManagerDevices.Device[]> {
+    if ( !this.isConnected || !this.homeyApi ) {
       throw new Error( 'Not connected to Homey' );
     }
 
-    try {
-      const devices = await this.homey.devices.getDevices();
-      return Object.values( devices ) as HomeyDevice[];
+    try {      
+      const devices = await this.homeyApi.devices.getDevices();
+      return Object.values( devices );
     } catch ( error ) {
       console.error( 'Failed to get devices:', error );
       throw error;
     }
   }
 
-  async getDevice( deviceId: string ): Promise<HomeyDevice | null> {
-    if ( !this.isConnected || !this.homey ) {
+  async getDevice( deviceId: string ): Promise<HomeyAPIV3Local.ManagerDevices.Device | null> {
+    if ( !this.isConnected || !this.homeyApi ) {
       throw new Error( 'Not connected to Homey' );
     }
 
     try {
-      return await this.homey.devices.getDevice( { id: deviceId } );
+      return await this.homeyApi.devices.getDevice( { id: deviceId } );
     } catch ( error ) {
       console.error( `Failed to get device ${deviceId}:`, error );
       return null;
@@ -174,12 +185,12 @@ export class HomeyClient {
   }
 
   async setDeviceCapabilityValue( deviceId: string, capabilityId: string, value: any ): Promise<boolean> {
-    if ( !this.isConnected || !this.homey ) {
+    if ( !this.isConnected || !this.homeyApi ) {
       throw new Error( 'Not connected to Homey' );
     }
 
     try {
-      const device = await this.homey.devices.getDevice( { id: deviceId } );
+      const device = await this.homeyApi.devices.getDevice( { id: deviceId } );
       await device.setCapabilityValue( { capabilityId, value } );
       return true;
     } catch ( error ) {
@@ -189,30 +200,30 @@ export class HomeyClient {
   }
 
   onDeviceUpdate( callback: ( device: HomeyDevice ) => void ): void {
-    if ( !this.homey ) return;
+    if ( !this.homeyApi ) return;
 
-    this.homey.devices.on( 'device.update', callback );
+    this.homeyApi.devices.on( 'device.update', callback );
   }
 
   onDeviceCreate( callback: ( device: HomeyDevice ) => void ): void {
-    if ( !this.homey ) return;
+    if ( !this.homeyApi ) return;
 
-    this.homey.devices.on( 'device.create', callback );
+    this.homeyApi.devices.on( 'device.create', callback );
   }
 
   onDeviceDelete( callback: ( device: HomeyDevice ) => void ): void {
-    if ( !this.homey ) return;
+    if ( !this.homeyApi ) return;
 
-    this.homey.devices.on( 'device.delete', callback );
+    this.homeyApi.devices.on( 'device.delete', callback );
   }
 
   disconnect(): void {
-    if ( this.homey ) {
-      this.homey.disconnect();
+    if ( this.homeyApi ) {
+      this.homeyApi.disconnect();
     }
     this.isConnected = false;
     this.api = null;
-    this.homey = null;
+    this.homeyApi = null;
   }
 
   isApiConnected(): boolean {
@@ -221,9 +232,8 @@ export class HomeyClient {
 
   getHomeyInfo(): any {
     return this.homey ? {
-      id: this.homey.id,
-      name: this.homey.name,
-      version: this.homey.version
+      id: this.homey.id || 'unknown',
+      isConnected: this.homeyApi?.isConnected ? this.homeyApi.isConnected() : this.isConnected
     } : null;
   }
 }
