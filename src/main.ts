@@ -35,11 +35,7 @@ class TileDashApp {
       this.initializeTheme();
       console.log( 'TileDashApp: Theme initialized' );
       
-      // Initialize tile renderer
-      this.initializeTileRenderer();
-      console.log( 'TileDashApp: Tile renderer initialized', this.tileRenderer );
-      
-      // Initialize dashboard
+      // Initialize dashboard (which includes connecting to Homey first)
       await this.initializeDashboard();
       console.log( 'TileDashApp: Dashboard initialized' );
       
@@ -122,7 +118,24 @@ class TileDashApp {
 
   private initializeTileRenderer(): void {
     try {
-      this.tileRenderer = new TileRenderer( 'dashboardContainer' );
+      if (!this.homeyClient) {
+        console.warn('HomeyClient not available - creating TileRenderer without Homey connection');
+        // Create a mock HomeyClient for development mode
+        const mockHomeyClient = {
+          homeyApi: null,
+          isApiConnected: () => false,
+          onDeviceUpdate: () => {},
+          addDeviceListener: async () => {},
+          removeDeviceListener: async () => {},
+          setCapabilityValue: async () => {},
+          triggerFlow: async () => {}
+        } as any;
+        this.tileRenderer = new TileRenderer( 'dashboardContainer', mockHomeyClient );
+        return;
+      }
+
+      // Normal initialization with actual HomeyClient
+      this.tileRenderer = new TileRenderer( 'dashboardContainer', this.homeyClient );
     } catch ( error ) {
       console.error( 'Failed to initialize tile renderer:', error );
     }
@@ -153,6 +166,10 @@ class TileDashApp {
     } catch ( error ) {
       console.warn( 'Failed to connect to Homey:', error );
     }
+
+    // Initialize tile renderer AFTER HomeyClient is set up
+    this.initializeTileRenderer();
+    console.log( 'TileDashApp: Tile renderer initialized', this.tileRenderer );
 
     // Render dashboard with tiles
     if ( this.tileRenderer ) {
@@ -250,6 +267,8 @@ class TileDashApp {
   }
 
   private initializeDeviceStateManagement(): void {
+    console.log('initializeDeviceStateManagement');
+    
     // Set up device state change listeners
     if ( typeof window.addEventListener === 'function' ) {
       window.addEventListener( 'deviceStateChange', ( ( event: CustomEvent ) => {

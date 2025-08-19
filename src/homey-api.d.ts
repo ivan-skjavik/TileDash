@@ -48,6 +48,12 @@ declare module 'homey-api' {
     webserver: HomeyAPIV3Local.ManagerWebserver;
     zigbee: HomeyAPIV3Local.ManagerZigbee;
     zones: HomeyAPIV3Local.ManagerZones;
-    zwave: HomeyAPIV3Local.ManagerZwave
+    zwave: HomeyAPIV3Local.ManagerZwave;
+    
+    // Extended methods added by HomeyClient for backward compatibility
+    setCapabilityValue: (deviceId: string, capabilityId: string, value: any) => Promise<void>;
+    triggerFlow: (flowId: string, tokens?: { [key: string]: any }) => Promise<void>;
+    addDeviceListener: (deviceId: string, capabilityId: string, callback: (newValue: any, oldValue: any) => void) => Promise<void>;
+    removeDeviceListener: (deviceId: string, capabilityId: string, callback: (newValue: any, oldValue: any) => void) => Promise<void>;
   }
 }

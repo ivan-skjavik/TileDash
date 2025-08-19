@@ -47,15 +47,6 @@ export interface HomeyCapability {
   options?: any;
 }
 
-export interface TileRenderOptions {
-  ratio?: number;
-  extraID?: string;
-  smooth?: boolean;
-  smallDevice?: boolean;
-  isDarkTheme?: boolean;
-  homeyApiService?: any;  // TODO: Add proper HomeyApiService type
-}
-
 export interface TileSettings {
   tileSize?: number;
   tileWidth?: number;
@@ -144,7 +135,9 @@ export interface BinarySensorTile extends BaseTile {
 export interface ButtonTile extends BaseTile {
   type: 'BUTTON';
   id: string;
-  capabilityID: string;
+  capabilityID?: string;
+  flowID?: string;
+  buttonValue?: any;
   icons?: {
     on: string;
     off: string;
@@ -348,13 +341,4 @@ export interface DeviceStateChangeEvent extends CustomEvent {
     value: any;
     oldValue: any;
   };
-}
-
-// Tile factory types
-export interface TileFactory {
-  createTile( device: HomeyDevice, item: Tile, options: TileRenderOptions ): HTMLElement;
-}
-
-export interface TileRenderer {
-  render( device: HomeyDevice, tile: Tile, container: HTMLElement, options: TileRenderOptions ): void;
 }

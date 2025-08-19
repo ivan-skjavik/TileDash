@@ -136,6 +136,10 @@ export const developmentConfig: DashboardConfig = {
           ]
         }
       ]
+    },
+    {
+      icon: 'mdi-home',
+      group: [],
     }
   ]
 };
