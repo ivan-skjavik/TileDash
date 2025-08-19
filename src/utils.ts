@@ -190,6 +190,31 @@ export class URLManager {
     return orientation === 'portrait' || orientation === 'landscape' ? orientation : null;
   }
 
+  // OAuth-related methods
+  static getAuthorizationCode(): string | null {
+    const urlParams = new URLSearchParams( window.location.search );
+    console.log('auth code in url:', urlParams.get('auth_code'));
+    return urlParams.get( 'auth_code' );
+  }
+
+  static getAuthError(): string | null {
+    const urlParams = new URLSearchParams( window.location.search );
+    return urlParams.get( 'auth_error' );
+  }
+
+  static getOAuthState(): string | null {
+    const urlParams = new URLSearchParams( window.location.search );
+    return urlParams.get( 'state' );
+  }
+
+  static clearOAuthParams(): void {
+    const url = new URL( window.location.href );
+    url.searchParams.delete( 'auth_code' );
+    url.searchParams.delete( 'auth_error' );
+    url.searchParams.delete( 'state' );
+    window.history.replaceState( {}, '', url.toString() );
+  }
+
   static updateURL( params: Record<string, string> ): void {
     const url = new URL( window.location.href );
     Object.entries( params ).forEach( ( [key, value] ) => {

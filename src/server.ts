@@ -16,6 +16,31 @@ app.use( express.static( '.' ) );
 
 // API Routes
 
+// OAuth callback route
+app.get( '/auth/callback', ( req: Request, res: Response ) => {
+  try {
+    const { code, state, error } = req.query;
+    
+    if ( error ) {
+      console.error( 'OAuth error:', error );
+      // Redirect back to main app with error
+      res.redirect( `/?auth_error=${encodeURIComponent( error as string )}` );
+      return;
+    }
+    
+    if ( code ) {
+      // Store the authorization code temporarily and redirect back to main app
+      // The client-side code will pick this up and exchange it for a token
+      res.redirect( `/?auth_code=${encodeURIComponent( code as string )}${state ? `&state=${encodeURIComponent( state as string )}` : ''}` );
+    } else {
+      res.redirect( '/?auth_error=missing_code' );
+    }
+  } catch ( error ) {
+    console.error( 'Error in OAuth callback:', error );
+    res.redirect( '/?auth_error=callback_error' );
+  }
+} );
+
 // Get dashboard configuration
 app.get( '/api/dashboard/config', ( _req: Request, res: Response ) => {
   try {
