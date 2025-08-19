@@ -108,7 +108,8 @@ export class ButtonTile extends BaseTile {
         // Button with capability (e.g., toggle or set value)
         const capability = this.getCapability();
         if (capability && capability.setable) {
-          const buttonValue = config.buttonValue !== undefined ? config.buttonValue : true;
+            // TODO this does not toggle correctly
+          const buttonValue = config.buttonValue !== undefined ? config.buttonValue : false;
           await this.homeyApi.setCapabilityValue(this.device.id, config.capabilityID, buttonValue);
         }
       } else if (config.flowID) {

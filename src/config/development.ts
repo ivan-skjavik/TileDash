@@ -19,7 +19,7 @@ export const developmentConfig: DashboardConfig = {
       icon: 'mdi-home',
       group: [
         {
-          title: "Development Tiles 2",
+          title: "Development Tiles 1",
           width: 8,
           height: 9,
           items: [
@@ -139,7 +139,25 @@ export const developmentConfig: DashboardConfig = {
     },
     {
       icon: 'mdi-home',
-      group: [],
+      group: [
+        {
+          title: "Development Tiles 2",
+          width: 8,
+          height: 9,
+          items: [
+            {
+                position: [0, 0],
+                name: "Lightswitch",
+                type: "BUTTON",
+                width: 1,
+                height: 1,
+                id: "56b58d98-3604-42e7-9945-8575d88fd8f3", // Id of your device. See Homey developper tool
+                capabilityID: "onoff", // See Homey developper tool
+                icon: "mdi-gate", //Need to be define even you will use icons option. See https://pictogrammers.com/library/mdi/
+                },
+          ]
+        }
+      ],
     }
   ]
 };

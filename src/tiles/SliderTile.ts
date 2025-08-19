@@ -24,6 +24,7 @@ export class SliderTile extends BaseTile {
 
   render(): void {
     this.element.classList.add('slider-tile');
+    this.element.classList.add('sliderTile'); // Add the original CSS class
     this.element.innerHTML = ''; // Clear existing content
 
     const config = this.sliderConfig;
@@ -55,6 +56,11 @@ export class SliderTile extends BaseTile {
 
       // Create slider
       this.createSlider(capability, currentValue);
+
+      // Add 'on' class if value > 0 (like original implementation)
+      if (parseFloat(String(currentValue)) > 0) {
+        this.element.classList.add('on');
+      }
     }
 
     // Setup event listeners
@@ -65,35 +71,43 @@ export class SliderTile extends BaseTile {
 
   private createSlider(capability: any, currentValue: number): void {
     const sliderContainer = document.createElement('div');
+    sliderContainer.classList.add('sliderContainer');
     sliderContainer.style.cssText = `
+      display: flex;
+      justify-content: center;
+      align-items: center;
       width: 100%;
       margin: 8px 0;
       padding: 0 8px;
     `;
 
+    console.log('capability:', capability, this.sliderConfig);
+
     this.sliderElement = document.createElement('input');
     this.sliderElement.type = 'range';
-    this.sliderElement.min = String(capability?.min || 0);
-    this.sliderElement.max = String(capability?.max || 100);
-    this.sliderElement.step = String(capability?.step || 1);
+    this.sliderElement.classList.add('sliderTrack');
+    this.sliderElement.min = String(this.sliderConfig.minValue || 0);
+    this.sliderElement.max = String(this.sliderConfig.maxValue || 100);
+    this.sliderElement.step = String(this.sliderConfig.step || 0.05);
     this.sliderElement.value = String(currentValue);
+    this.sliderElement.style.width = '100%';
 
-    this.sliderElement.style.cssText = `
-      width: 100%;
-      -webkit-appearance: none;
-      appearance: none;
-      height: 4px;
-      border-radius: 2px;
-      background: #ddd;
-      outline: none;
-    `;
-
-    // Add slider event listener
+    // Add both input and change event listeners like the original
     this.sliderElement.addEventListener('input', (e) => {
+      const target = e.target as HTMLInputElement;
+      const newValue = parseFloat(target.value);
+      this.updateSliderVisual(target, newValue);
+      this.updateValueDisplay(newValue);
+    });
+
+    this.sliderElement.addEventListener('change', (e) => {
       const target = e.target as HTMLInputElement;
       const newValue = parseFloat(target.value);
       this.handleSliderChange(newValue);
     });
+
+    // Initialize visual appearance
+    this.updateSliderVisual(this.sliderElement, currentValue);
 
     sliderContainer.appendChild(this.sliderElement);
     this.element.appendChild(sliderContainer);
@@ -106,9 +120,6 @@ export class SliderTile extends BaseTile {
     try {
       console.log(`🎛️ Slider changed: ${this.device.name} ${capabilityID} = ${value}`);
       
-      // Update local display immediately for responsiveness
-      this.updateValueDisplay(value);
-      
       // Send to Homey
       await this.homeyApi.setCapabilityValue(this.device.id, capabilityID, value);
       
@@ -120,8 +131,24 @@ export class SliderTile extends BaseTile {
       this.updateValueDisplay(originalValue);
       if (this.sliderElement) {
         this.sliderElement.value = String(originalValue);
+        this.updateSliderVisual(this.sliderElement, originalValue);
       }
     }
+  }
+
+  /**
+   * Update slider visual appearance with gradient background like the original
+   */
+  private updateSliderVisual(slider: HTMLInputElement, value: number): void {
+    const percentage = (value / parseFloat(slider.max)) * 100;
+    
+    // Get CSS custom properties for colors (fallback to defaults if not available)
+    const root = document.documentElement;
+    const primColor = getComputedStyle(root).getPropertyValue('--sliderPrimColor')?.trim() || '#007acc';
+    const secColor = getComputedStyle(root).getPropertyValue('--sliderSecColor')?.trim() || '#cacaca';
+    
+    // Apply gradient background like the original implementation
+    slider.style.background = `linear-gradient(to right, ${primColor} ${percentage}%, ${secColor} ${percentage}%)`;
   }
 
   update(newValue: any, capability: string): void {
@@ -133,9 +160,18 @@ export class SliderTile extends BaseTile {
     // Update value display
     this.updateValueDisplay(newValue);
 
-    // Update slider position
+    // Update slider position and visual appearance
     if (this.sliderElement) {
       this.sliderElement.value = String(newValue);
+      this.updateSliderVisual(this.sliderElement, newValue);
+    }
+
+    // Update 'on' class based on value (like original implementation)
+    const numValue = parseFloat(String(newValue));
+    if (numValue > 0) {
+      this.element.classList.add('on');
+    } else {
+      this.element.classList.remove('on');
     }
   }
 
