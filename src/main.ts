@@ -140,8 +140,8 @@ class TileDashApp {
       console.error( 'Configuration validation errors:', errors );
     }
 
-    // Apply URL overrides (including token checking)
-    await this.applyURLOverrides();
+    // Apply URL overrides (theme, orientation, etc.)
+    this.applyURLOverrides();
 
     // Initialize header display
     this.initializeHeader();
@@ -183,13 +183,9 @@ class TileDashApp {
     } catch ( error ) {
       console.error( '❌ Homey connection failed:', error );
       
-      // For development, fall back to development config devices
-      if ( this.config?.settings.token === 'development_token' ) {
-        console.log( '🛠️ Using development mode - no real Homey connection' );
-        return [];
-      }
-      
-      throw error;
+      // In development mode, continue without Homey connection
+      console.log( '🛠️ Continuing in development mode - no real Homey connection' );
+      return [];
     }
   }
 
@@ -239,7 +235,7 @@ class TileDashApp {
     }
   }
 
-  private async applyURLOverrides(): Promise<void> {
+  private applyURLOverrides(): void {
     if ( !this.config ) return;
 
     const orientation = URLManager.getOrientation();
@@ -247,12 +243,9 @@ class TileDashApp {
       this.config.settings.orientation = orientation;
     }
 
-    // Check for token in environment first, then URL params
-    const token = await URLManager.getTokenWithPriority();
-    if ( token ) {
-        console.log('got token', token);
-        
-      this.config.settings.token = token;
+    const theme = URLManager.getTheme();
+    if ( theme ) {
+      this.applyTheme( theme );
     }
   }
 

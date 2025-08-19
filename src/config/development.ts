@@ -12,7 +12,6 @@ export const developmentConfig: DashboardConfig = {
     numOfLandImg: 4,
     numOfPortImg: 5,
     backgroundImage: "./img/hexagone.jpg",
-    token: "development_token",
     softMobileHeader: true,
   },
   dashboard: [

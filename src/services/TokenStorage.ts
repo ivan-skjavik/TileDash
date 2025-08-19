@@ -1,73 +1,72 @@
 import { AthomCloudAPI } from "homey-api";
 
 export class TokenStorage {
-  private static readonly TOKEN_KEY = 'homey_auth_token';
-  private static readonly TOKEN_EXPIRY_BUFFER = 5 * 60 * 1000; // 5 minutes buffer
+  private static readonly HOMEY_API_TOKEN_KEY = 'homey-api';
 
   /**
-   * Save token to localStorage
+   * Check if AthomCloudAPI has a valid token stored
    */
-  static saveToken( token: AthomCloudAPI.Token ): void {
+  static hasValidToken(): boolean {
     try {
-      localStorage.setItem( this.TOKEN_KEY, JSON.stringify( token ) );
-      console.log( '🔑 Token saved to localStorage' );
+      const tokenData = localStorage.getItem( this.HOMEY_API_TOKEN_KEY );
+      if ( !tokenData ) {
+        return false;
+      }
+
+      const parsedData = JSON.parse( tokenData );
+      // Check if we have token data with an access_token
+      return !!(parsedData && parsedData.token && parsedData.token.access_token);
     } catch ( error ) {
-      console.error( 'Failed to save token to localStorage:', error );
+      console.error( 'Failed to check token validity:', error );
+      return false;
     }
   }
 
   /**
-   * Get token from localStorage
+   * Get token information (for debugging/display purposes)
    */
-  static getToken(): AthomCloudAPI.Token | null {
+  static getTokenInfo(): any {
     try {
-      const tokenStr = localStorage.getItem( this.TOKEN_KEY );
-      if ( !tokenStr ) {
+      const tokenData = localStorage.getItem( this.HOMEY_API_TOKEN_KEY );
+      if ( !tokenData ) {
         return null;
       }
-      
-      const token: AthomCloudAPI.Token = JSON.parse( tokenStr );
-      
-      // Check if token is expired (with buffer)
-      if ( token.expires_in && Date.now() > ( Date.now() + ( token.expires_in * 1000 ) - this.TOKEN_EXPIRY_BUFFER ) ) {
-        console.log( '🔑 Token expired, removing from storage' );
-        this.removeToken();
-        return null;
-      }
-      
-      return token;
+
+      const parsedData = JSON.parse( tokenData );
+      return parsedData.token || null;
     } catch ( error ) {
-      console.error( 'Failed to get token from localStorage:', error );
+      console.error( 'Failed to get token info:', error );
       return null;
     }
   }
 
   /**
-   * Remove token from localStorage
+   * Clear the AthomCloudAPI token (logout)
    */
   static removeToken(): void {
     try {
-      localStorage.removeItem( this.TOKEN_KEY );
-      console.log( '🔑 Token removed from localStorage' );
+      localStorage.removeItem( this.HOMEY_API_TOKEN_KEY );
+      console.log( '🔑 Homey API token cleared from localStorage' );
     } catch ( error ) {
       console.error( 'Failed to remove token from localStorage:', error );
     }
   }
 
   /**
-   * Check if we have a valid token
+   * Check if we're currently logged in by creating a temporary API instance
    */
-  static hasValidToken(): boolean {
-    return this.getToken() !== null;
-  }
+  static async checkLoginStatus( clientId: string, clientSecret: string ): Promise<boolean> {
+    try {
+      const tempApi = new AthomCloudAPI( {
+        clientId,
+        clientSecret,
+        redirectUrl: 'http://localhost:3000' // Dummy URL for checking
+      } );
 
-  /**
-   * Update token expiry time
-   */
-  static updateTokenExpiry( token: AthomCloudAPI.Token, expiresInSeconds?: number ): AthomCloudAPI.Token {
-    if ( expiresInSeconds ) {
-      token.expires_in = expiresInSeconds;
+      return await tempApi.isLoggedIn();
+    } catch ( error ) {
+      console.error( 'Failed to check login status:', error );
+      return false;
     }
-    return token;
   }
 }

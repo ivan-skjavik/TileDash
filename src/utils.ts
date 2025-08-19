@@ -142,43 +142,6 @@ export class LocalStorageManager {
 }
 
 export class URLManager {
-  static getToken(): string | null {
-    const urlParams = new URLSearchParams( window.location.search );
-    return urlParams.get( 'token' );
-  }
-
-  static async getEnvironmentToken(): Promise<string | null> {
-    try {
-      const response = await fetch( '/api/env/token' );
-      if ( response.ok ) {
-        const data = await response.json();
-        return data.token;
-      }
-    } catch ( error ) {
-      console.warn( 'Failed to get environment token:', error );
-    }
-    return null;
-  }
-
-  static async getTokenWithPriority(): Promise<string | null> {
-    // First check environment variables
-    const envToken = await this.getEnvironmentToken();
-    if ( envToken ) {
-      console.log( '🔑 Using token from environment variables' );
-      return envToken;
-    }
-    
-    // Then check URL parameters
-    const urlToken = this.getToken();
-    if ( urlToken ) {
-      console.log( '🔑 Using token from URL parameters' );
-      return urlToken;
-    }
-    
-    console.log( '⚠️ No token found in environment or URL' );
-    return null;
-  }
-
   static getTheme(): string | null {
     const urlParams = new URLSearchParams( window.location.search );
     return urlParams.get( 'theme' );

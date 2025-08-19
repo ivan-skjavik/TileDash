@@ -139,12 +139,6 @@ app.get( '/api/health', ( _req: Request, res: Response ) => {
   res.json( { status: 'ok', timestamp: new Date().toISOString() } );
 } );
 
-// Get environment token
-app.get( '/api/env/token', ( _req: Request, res: Response ) => {
-  const token = process.env.HOMEY_TOKEN;
-  res.json( { token: token || null } );
-} );
-
 // Serve main HTML file for all non-API routes
 app.get( '*', ( _req: Request, res: Response ) => {
   res.sendFile( join( __dirname, '../index.html' ) );

@@ -35,10 +35,9 @@ export class HomeyClient {
         return await this.authenticateWithCode( authCode );
       }
 
-      // Check for existing valid token
-      const existingToken = TokenStorage.getToken();
-      if ( existingToken ) {
-        console.log( '🔑 Found existing token, attempting to connect...', existingToken );
+      // Check for existing valid token using AthomCloudAPI's built-in storage
+      if ( TokenStorage.hasValidToken() ) {
+        console.log( '🔑 Found existing token, attempting to connect...' );
         return await this.connectWithToken();
       }
 
@@ -88,12 +87,13 @@ export class HomeyClient {
       window.history.replaceState( {}, '', currentUrl.toString() );
 
       // Exchange authorization code for token
-      const token = await this.api.authenticateWithAuthorizationCode();
+      await this.api.authenticateWithAuthorizationCode();
       
       // Clean up URL
       URLManager.clearOAuthParams();
 
-      TokenStorage.saveToken( token );
+      // Token is automatically saved by AthomCloudAPI to localStorage under 'homey-api' key
+      console.log( '✅ Token obtained and saved automatically by AthomCloudAPI' );
       
       // Now connect with the token
       return await this.connectWithToken();
@@ -105,11 +105,11 @@ export class HomeyClient {
   }
 
   /**
-   * Connect using an existing token
+   * Connect using AthomCloudAPI's stored token
    */
   private async connectWithToken(): Promise<boolean> {
     try {
-      console.log( '🔌 Connecting with token...');
+      console.log( '🔌 Connecting with stored token...' );
       
       this.api = new AthomCloudAPI( {
         clientId: this.CLIENT_ID,
@@ -120,7 +120,7 @@ export class HomeyClient {
       // Verify token is still valid
       const loggedIn = await this.api.isLoggedIn();
       if ( !loggedIn ) {
-        console.log( '🔑 Token expired, removing and restarting auth...' );
+        console.log( '🔑 Token expired or invalid, restarting auth flow...' );
         TokenStorage.removeToken();
         await this.startOAuthFlow();
         return false;
@@ -141,7 +141,7 @@ export class HomeyClient {
     } catch ( error ) {
       console.error( '❌ Failed to connect with token:', error );
       // If connection fails, remove the token and restart auth
-    //   TokenStorage.removeToken(); // TODO reimplement when system is verified to work
+      TokenStorage.removeToken();
       throw error;
     }
   }
