@@ -1,6 +1,7 @@
-import { AppConfig } from '../types';
+import { TileFactory } from '@/tiles/TileFactory';
+import { AppConfig } from './src/types';
 
-export const developmentConfig: AppConfig = {
+export const appConfig: AppConfig = {
 	settings: {
 		tileSize: 80,
 		tileMargin: 5,
@@ -14,10 +15,17 @@ export const developmentConfig: AppConfig = {
 		backgroundImage: "./img/hexagone.jpg",
 		softMobileHeader: true,
 	},
+
+	/**
+	 * Dashboard configuration
+	 * id: must be unique and is loaded by supplying id in the URL "http://<your-url>?id=1"
+	 * title: optional title for the dashboard, could be a room or home
+	 * pages: defines all pages for a given dashboard
+	 */
 	dashboards: [
 		{
 			id: '1',
-			title: 'Dash 1',
+			title: 'Main Dashboard',
 			pages: [
 				{
 					icon: 'mdi-home',
@@ -51,45 +59,43 @@ export const developmentConfig: AppConfig = {
 									timeScroll: 5, // Time in seconds for scrolling images
 									id: "tile-image-1", // Define which id you want but use a different id for each IMAGE type in your dashboard
 								},
-								{
+								TileFactory.createConfig( 'SLIDER', {
 									position: [ 2, 3, ],
+									id: "56b58d98-3604-42e7-9945-8575d88fd8f3",
 									name: "Taklys Kontor",
-									type: "SLIDER",
-									orientation: 'horizontal', // Can also be 'vertical'
+									orientation: 'horizontal', 
 									width: 4,
 									height: 1,
-									minValue: 0, // Min value of the slider. For 'dim' min value is 0 for light off
-									maxValue: 1, // Max value of the slider. For 'dim' max value is 1 for light 100%
-									step: 0.01, // Step for each slider moves.
-									id: "56b58d98-3604-42e7-9945-8575d88fd8f3", //See https://pictogrammers.com/library/mdi/
+									minValue: 0, 
+									maxValue: 1,
+									step: 0.01,
 									capabilityID: "dim",
 									icon: "mdi-lightbulb",
-								},
-								{
+								} ),
+								TileFactory.createConfig( 'SLIDER', {
 									position: [ 2, 4, ],
+									id: "15575f05-1d5c-4c37-95d6-2fce7f4712b1",
 									name: "Taklys Loftstue",
-									type: "SLIDER",
-									orientation: 'horizontal', // Can also be 'vertical'
+									orientation: 'horizontal',
 									width: 4,
 									height: 1,
-									minValue: 0, // Min value of the slider. For 'dim' min value is 0 for light off
-									maxValue: 1, // Max value of the slider. For 'dim' max value is 1 for light 100%
-									step: 0.01, // Step for each slider moves.
-									id: "15575f05-1d5c-4c37-95d6-2fce7f4712b1", //See https://pictogrammers.com/library/mdi/
+									minValue: 0, 
+									maxValue: 1, 
+									step: 0.01, 
 									capabilityID: "dim",
 									icon: "mdi-lightbulb",
-								},
+								} ),
 								{
 									position: [ 2, 5, ],
+									id: "20dcccf8-3734-4a67-994b-1f6171af177c",
 									name: "Taklys Bad",
 									type: "SLIDER",
-									orientation: 'horizontal', // Can also be 'vertical'
+									orientation: 'horizontal', 
 									width: 4,
 									height: 1,
-									minValue: 0, // Min value of the slider. For 'dim' min value is 0 for light off
-									maxValue: 1, // Max value of the slider. For 'dim' max value is 1 for light 100%
-									step: 0.01, // Step for each slider moves.
-									id: "20dcccf8-3734-4a67-994b-1f6171af177c", //See https://pictogrammers.com/library/mdi/
+									minValue: 0, 
+									maxValue: 1, 
+									step: 0.01, 
 									capabilityID: "dim",
 									icon: "mdi-lightbulb",
 								},
@@ -97,13 +103,13 @@ export const developmentConfig: AppConfig = {
 									position: [ 2, 6, ],
 									name: "Baklys TV",
 									type: "SLIDER",
-									orientation: 'horizontal', // Can also be 'vertical'
+									orientation: 'horizontal', 
 									width: 4,
 									height: 1,
-									minValue: 0, // Min value of the slider. For 'dim' min value is 0 for light off
-									maxValue: 1, // Max value of the slider. For 'dim' max value is 1 for light 100%
-									step: 0.01, // Step for each slider moves.
-									id: "850913f1-3f1c-4de4-8ba7-d127b4d7962b", //See https://pictogrammers.com/library/mdi/
+									minValue: 0, 
+									maxValue: 1, 
+									step: 0.01, 
+									id: "850913f1-3f1c-4de4-8ba7-d127b4d7962b",
 									capabilityID: "dim",
 									icon: "mdi-lightbulb",
 								},
@@ -165,7 +171,46 @@ export const developmentConfig: AppConfig = {
 				},
 			],
 		},
+		{
+			id: '2',
+			title: 'Kitchen Dashboard',
+			pages: [
+				{
+					icon: 'mdi-chef-hat',
+					groups: [
+						{
+							title: "Kitchen Controls",
+							width: 6,
+							height: 6,
+							tiles: [
+								{
+									position: [ 0, 0, ],
+									name: "Kitchen Light",
+									type: "SWITCH",
+									width: 2,
+									height: 1,
+									id: "example-kitchen-light-id", // Replace with your actual device ID
+									capabilityID: "onoff",
+									icon: "mdi-lightbulb",
+								},
+								{
+									position: [ 0, 1, ],
+									name: "Kitchen Temperature",
+									type: "SENSOR",
+									width: 2,
+									height: 1,
+									id: "example-kitchen-sensor-id", // Replace with your actual device ID
+									capabilityID: "measure_temperature",
+									icon: "mdi-thermometer",
+									unit: "°C",
+								},
+							],
+						},
+					],
+				},
+			],
+		},
 	],
 };
 
-export default developmentConfig;
+export default appConfig;

@@ -1,6 +1,6 @@
-import { AppConfig } from './types';
+import { AppConfig, DashboardConfig } from './types';
 import { DashboardUtils, LocalStorageManager, URLManager, DeviceStateManager } from './utils';
-import { developmentConfig } from './config/development';
+import { appConfig } from '../config';
 import { TileRenderer } from './renderers/TileRenderer';
 import HomeyClient from './services/HomeyClient';
 
@@ -48,22 +48,31 @@ class TileDashApp {
 		}
 	}
 
-	private async loadConfiguration(): Promise<void> {
-		// TODO implement screens for editing configs in db.
-		// Try to load from server/db
-		try {
-			const response = await fetch( '/api/dashboard/config' );
-			if ( response.ok ) {
-				this.config = await response.json();
-			}
-		} catch ( error ) {
-			console.warn( 'Failed to load config from server:', error );
+	private getSelectedDashboard(): DashboardConfig | null {
+		if ( !this.config || !this.config.dashboards || this.config.dashboards.length === 0 ) {
+			return null;
 		}
 
-		// If no config found, use default
-		if ( !this.config ) {
-			this.config = developmentConfig;
+		// Get dashboard ID from URL parameter
+		const dashboardId = URLManager.getDashboardId();
+		
+		if ( dashboardId ) {
+			// Find dashboard by ID
+			const dashboard = this.config.dashboards.find( d => d.id === dashboardId );
+			if ( dashboard ) {
+				return dashboard;
+			}
+			console.warn( `Dashboard with ID '${dashboardId}' not found, using first available dashboard` );
 		}
+		
+		// Return first dashboard if no ID specified or ID not found
+		return this.config.dashboards[0];
+	}
+
+	private async loadConfiguration(): Promise<void> {
+		// Load configuration from config.ts file
+		this.config = appConfig;
+		console.log( 'TileDashApp: Configuration loaded from config.ts' );
 	}
 
 	private initializeTheme(): void {
@@ -142,10 +151,15 @@ class TileDashApp {
 				return;
 			}
 
-			this.tileRenderer.renderDashboard( this.config.dashboard, this.config.settings, devices );
-		}
+			const selectedDashboard = this.getSelectedDashboard();
+			if ( !selectedDashboard ) {
+				console.error( '⛔ No dashboard available to render' );
+				return;
+			}
 
-		// Initialize device state management
+			console.log( `TileDashApp: Rendering dashboard '${selectedDashboard.title || selectedDashboard.id}'` );
+			this.tileRenderer.renderDashboard( selectedDashboard.pages, this.config.settings, devices );
+		}		// Initialize device state management
 		this.initializeDeviceStateManagement();
 
 		console.log( 'Dashboard configuration loaded:', this.config );
@@ -278,22 +292,6 @@ class TileDashApp {
 			}
 		} catch ( error ) {
 			console.warn( 'Error logging device change:', error );
-		}
-	}
-
-	public async updateConfiguration( newConfig: AppConfig ): Promise<void> {
-		if ( !this.homeyClient ) {
-			throw new Error( 'HomeyClient is not initialized' );
-		}
-
-		this.config = newConfig;
-		LocalStorageManager.set( 'config', this.config );
-    
-		// Re-render dashboard
-		if ( this.tileRenderer && this.config ) {
-			const devices = this.homeyClient.isConnected ? 
-				await this.homeyClient.getDevices() : [];
-			this.tileRenderer.renderDashboard( this.config.dashboard, this.config.settings, devices );
 		}
 	}
 }

@@ -110,17 +110,31 @@ export type Position = [number, number]; // [x, y] coordinates
 
 // Base tile interface with common properties
 export interface BaseTileData {
+  /** Position of the tile on the dashboard group given as [x, y] coordinates */
   position: Position;
+
+  /** Name of the tile */
   name?: string;
+
+  /** Width of the tile in grid units */
   width: number;
+
+  /** Height of the tile in grid units */
   height: number;
+
+  /** Icon for the tile, check https://pictogrammers.com/library/mdi/ for available icons, prefix with 'mdi-' */
   icon?: string;
 }
 
 // Device-based tiles extend BaseTileData with device properties
 export interface DeviceTileData extends BaseTileData {
-  id: string; // device ID
-  capabilityID: string; // capability to monitor/control
+  /** Unique identifier for the device.
+   *  Check Homey developer tool for device ID (https://tools.developer.homey.app/tools/devices) */
+  id: string;
+
+  /** Capability to monitor/control.
+   *  Check Homey developer tool for available capabilities (https://tools.developer.homey.app/tools/devices) */
+  capabilityID: string;
 }
 
 export interface VirtualTile extends BaseTileData {
@@ -173,12 +187,30 @@ export interface SensorTile extends DeviceTileData {
 }
 
 export interface SliderTile extends DeviceTileData {
+  /** Type of the tile, set to 'SLIDER' for slider functionality */
   type: 'SLIDER';
+
+  /** Orientation of the slider, either 'horizontal' or 'vertical' */
   orientation: 'horizontal' | 'vertical';
+
+  /** 
+   * Minimum value of the slider. 
+   * For 'dim' type, the minimum value is 0, representing light off.
+   */
   minValue: number;
+
+  /** Maximum value of the slider
+   * For 'dim' type, the maximum value is 1, representing light 100%.
+   */
   maxValue: number;
+
+  /** Step increment for the slider */
   step: number;
+
+  /** Whether to display the current value on the slider */
   showValue?: boolean;
+
+  /** Unit of measurement for the slider value (e.g., '%', '°C') */
   unit?: string;
 }
 
