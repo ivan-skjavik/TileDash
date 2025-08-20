@@ -1,4 +1,4 @@
-import { Tile, Group, DashboardPage, HomeyDevice, SliderTile as SliderTileConfig, SwitchTile as SwitchTileConfig, SensorTile as SensorTileConfig, ButtonTile as ButtonTileConfig } from '../types';
+import { Tile, DashboardGroup, DashboardPage, HomeyDevice, SliderTile as SliderTileConfig, SwitchTile as SwitchTileConfig, SensorTile as SensorTileConfig, ButtonTile as ButtonTileConfig } from '../types';
 import { BaseTile } from '../tiles/BaseTile';
 import { SliderTile } from '../tiles/SliderTile';
 import { SwitchTile } from '../tiles/SwitchTile';
@@ -293,7 +293,7 @@ export class TileRenderer {
 			return;
 		}
 
-		console.log( `📄 Rendering page ${pageIndex} with ${page.group.length} groups` );
+		console.log( `📄 Rendering page ${pageIndex} with ${page.groups.length} groups` );
 
 		// Create page container
 		const pageContainer = document.createElement( 'div' );
@@ -308,27 +308,27 @@ export class TileRenderer {
     `;
 
 		// Render each group
-		page.group.forEach( ( group, groupIndex ) => {
+		page.groups.forEach( ( group, groupIndex ) => {
 			this.renderGroup( group, devices, pageIndex, groupIndex, pageContainer );
 		} );
 
 		// Add page to main container
 		this.container.appendChild( pageContainer );
 
-		console.log( `📄 Rendered page ${pageIndex} with ${page.group.length} groups` );
+		console.log( `📄 Rendered page ${pageIndex} with ${page.groups.length} groups` );
 	}
 
 	/**
    * 3. Render a group with its tiles
    */
 	public renderGroup(
-		group: Group,
+		group: DashboardGroup,
 		devices: Map<string, HomeyDevice>,
 		pageIndex: number,
 		groupIndex: number,
 		parentContainer: HTMLElement
 	): void {
-		console.log( `📦 Rendering group ${groupIndex} with ${group.items.length} tiles` );
+		console.log( `📦 Rendering group ${groupIndex} with ${group.tiles.length} tiles` );
 
 		// Create group container
 		const groupContainer = document.createElement( 'div' );
@@ -363,7 +363,7 @@ export class TileRenderer {
 		}
 
 		// Render tiles in this group
-		group.items.forEach( ( item, itemIndex ) => {
+		group.tiles.forEach( ( item, itemIndex ) => {
 			const deviceId = ( item as any ).id;
 			const device = deviceId ? devices.get( deviceId ) : null;
 			const tileId = `page-${pageIndex}-group-${groupIndex}-tile-${itemIndex}`;
@@ -383,7 +383,7 @@ export class TileRenderer {
 		// Add group to page container
 		parentContainer.appendChild( groupContainer );
 
-		console.log( `📦 Rendered group ${groupIndex} with ${group.items.length} tiles` );
+		console.log( `📦 Rendered group ${groupIndex} with ${group.tiles.length} tiles` );
 	}
 
 	/**

@@ -47,7 +47,12 @@ export interface HomeyCapability {
   options?: any;
 }
 
-export interface TileSettings {
+export interface AppConfig {
+  settings: AppSettings;
+  dashboards: DashboardConfig[];
+}
+
+export interface AppSettings {
   tileSize?: number;
   tileWidth?: number;
   tileHeight?: number;
@@ -66,6 +71,26 @@ export interface TileSettings {
   token?: string;
 }
 
+export interface DashboardConfig {
+  id: string;
+  title?: string;
+  pages: DashboardPage[];
+  flows?: Flow[];
+}
+
+export interface DashboardPage {
+  title?: string;
+  icon: string;
+  groups: DashboardGroup[];
+}
+
+export interface DashboardGroup {
+  title?: string;
+  width: number;
+  height: number;
+  tiles: Tile[];
+}
+
 export interface HeaderSensor {
   name?: string;
   id: string;
@@ -81,21 +106,10 @@ export interface ScreenSaver {
   enableOnMobile?: boolean;
 }
 
-export interface DashboardPage {
-  icon: string;
-  group: Group[];
-}
-
-export interface Group {
-  title?: string;
-  width: number;
-  height: number;
-  items: Tile[];
-}
-
 export type Position = [number, number]; // [x, y] coordinates
 
-export interface BaseTile {
+// Base tile interface with common properties
+export interface BaseTileData {
   position: Position;
   name?: string;
   width: number;
@@ -103,14 +117,18 @@ export interface BaseTile {
   icon?: string;
 }
 
-export interface VirtualTile extends BaseTile {
+// Device-based tiles extend BaseTileData with device properties
+export interface DeviceTileData extends BaseTileData {
+  id: string; // device ID
+  capabilityID: string; // capability to monitor/control
+}
+
+export interface VirtualTile extends BaseTileData {
   type: 'VIRTUAL';
 }
 
-export interface SwitchTile extends BaseTile {
+export interface SwitchTile extends DeviceTileData {
   type: 'SWITCH';
-  id: string;
-  capabilityID: string;
   icons?: {
     on: string;
     off: string;
@@ -120,10 +138,8 @@ export interface SwitchTile extends BaseTile {
   effectOff?: string;
 }
 
-export interface BinarySensorTile extends BaseTile {
+export interface BinarySensorTile extends DeviceTileData {
   type: 'BINARY_SENSOR';
-  id: string;
-  capabilityID: string;
   icons?: {
     on: string;
     off: string;
@@ -132,7 +148,7 @@ export interface BinarySensorTile extends BaseTile {
   effectOff?: string;
 }
 
-export interface ButtonTile extends BaseTile {
+export interface ButtonTile extends BaseTileData {
   type: 'BUTTON';
   id: string;
   capabilityID?: string;
@@ -146,10 +162,8 @@ export interface ButtonTile extends BaseTile {
   };
 }
 
-export interface SensorTile extends BaseTile {
+export interface SensorTile extends DeviceTileData {
   type: 'SENSOR';
-  id: string;
-  capabilityID: string;
   unit: string;
   secondValue?: {
     capabilityID: string;
@@ -158,10 +172,8 @@ export interface SensorTile extends BaseTile {
   };
 }
 
-export interface SliderTile extends BaseTile {
+export interface SliderTile extends DeviceTileData {
   type: 'SLIDER';
-  id: string;
-  capabilityID: string;
   orientation: 'horizontal' | 'vertical';
   minValue: number;
   maxValue: number;
@@ -170,7 +182,7 @@ export interface SliderTile extends BaseTile {
   unit?: string;
 }
 
-export interface ImageTile extends BaseTile {
+export interface ImageTile extends BaseTileData {
   type: 'IMAGE';
   id: string;
   folder?: string;
@@ -178,7 +190,7 @@ export interface ImageTile extends BaseTile {
   timeScroll?: number;
 }
 
-export interface PopupTile extends BaseTile {
+export interface PopupTile extends BaseTileData {
   type: 'POPUP' | 'VIRTUAL_POPUP';
   id?: string;
   capabilityID?: string;
@@ -193,10 +205,8 @@ export interface PopupTile extends BaseTile {
   };
 }
 
-export interface HeimdallTile extends BaseTile {
+export interface HeimdallTile extends DeviceTileData {
   type: 'HEIMDALL';
-  id: string;
-  capabilityID: string;
   code?: string;
   icons?: {
     armed: string;
@@ -205,10 +215,8 @@ export interface HeimdallTile extends BaseTile {
   };
 }
 
-export interface ShutterTile extends BaseTile {
+export interface ShutterTile extends DeviceTileData {
   type: 'SHUTTER';
-  id: string;
-  capabilityID: string;
   icons?: {
     up: string;
     idle: string;
@@ -216,10 +224,8 @@ export interface ShutterTile extends BaseTile {
   };
 }
 
-export interface ThermostatTile extends BaseTile {
+export interface ThermostatTile extends DeviceTileData {
   type: 'THERMOSTAT';
-  id: string;
-  capabilityID: string;
   onOffCapabilityID: string;
   heatingCapabilityID: string;
   step: number;
@@ -228,23 +234,19 @@ export interface ThermostatTile extends BaseTile {
   unit: string;
 }
 
-export interface MediaTile extends BaseTile {
+export interface MediaTile extends DeviceTileData {
   type: 'MEDIA';
-  id: string;
   homeyIP?: string;
   accountID?: string;
   minVol: number;
   maxVol: number;
   volStep: number;
-  capabilityID: string;
   standbyIcon?: string;
   standbyImage?: string;
 }
 
-export interface GaugeTile extends BaseTile {
+export interface GaugeTile extends DeviceTileData {
   type: 'GAUGE';
-  id: string;
-  capabilityID: string;
   unit: string;
   maxValue: number;
   secondValue?: {
@@ -259,10 +261,8 @@ export interface GaugeTile extends BaseTile {
   };
 }
 
-export interface DoorbirdPopupTile extends BaseTile {
+export interface DoorbirdPopupTile extends DeviceTileData {
   type: 'DOORBIRD_POPUP';
-  id: string;
-  capabilityID: string;
   doorbirdIP: string;
   user: string;
   password: string;
@@ -295,15 +295,54 @@ export type Tile =
   | GaugeTile 
   | DoorbirdPopupTile;
 
+// Type utilities for tile discrimination and inference
+export type TileType = Tile['type'];
+
+/**
+ * Get tile config type based on tile type string
+ * Usage: TileConfigByType<'SLIDER'> => SliderTile
+ */
+export type TileConfigByType<T extends TileType> = Extract<Tile, { type: T }>;
+
+/**
+ * Type guard to check if a tile is of a specific type
+ * Usage: if (isTileOfType(config, 'SLIDER')) { // config is now SliderTile }
+ */
+export function isTileOfType<T extends TileType>( 
+	tile: Tile,
+	type: T
+): tile is TileConfigByType<T> {
+	return tile.type === type;
+}
+
+/**
+ * Helper function to create type-safe tile configs
+ * Usage: const sliderTile = createTileConfig('SLIDER', { ... })
+ */
+export function createTileConfig<T extends TileType>( 
+	type: T,
+	config: Omit<TileConfigByType<T>, 'type'>
+): TileConfigByType<T> {
+	return { type, ...config, } as TileConfigByType<T>;
+}
+
+/**
+ * Check if tile is a device-based tile (has id and capabilityID)
+ */
+export function isDeviceTile( tile: Tile ): tile is Tile & DeviceTileData {
+	return 'id' in tile && 'capabilityID' in tile;
+}
+
+/**
+ * Check if tile is virtual (doesn't connect to a device)
+ */
+export function isVirtualTile( tile: Tile ): tile is VirtualTile | ImageTile {
+	return tile.type === 'VIRTUAL' || tile.type === 'IMAGE';
+}
+
 export interface Flow {
   id: string;
   name: string;
-}
-
-export interface DashboardConfig {
-  settings: TileSettings;
-  dashboard: DashboardPage[];
-  flows?: Flow[];
 }
 
 export interface DeviceLog {

@@ -184,7 +184,27 @@ protected getCapability(): any {
  * Get the capability ID for this tile - subclasses can override this
  */
 protected getCapabilityID(): string | undefined {
-// Default implementation - try to access capabilityID property
-	return ( this.config as any ).capabilityID;
+	// Use type-safe property access
+	if ( 'capabilityID' in this.config ) {
+		return this.config.capabilityID;
+	}
+	return undefined;
+}
+
+/**
+ * Get the device ID for this tile
+ */
+protected getDeviceID(): string | undefined {
+	if ( 'id' in this.config ) {
+		return this.config.id;
+	}
+	return undefined;
+}
+
+/**
+ * Check if this tile is connected to a device
+ */
+protected isDeviceTile(): boolean {
+	return 'id' in this.config && 'capabilityID' in this.config;
 }
 }

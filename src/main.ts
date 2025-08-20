@@ -1,4 +1,4 @@
-import { DashboardConfig } from './types';
+import { AppConfig } from './types';
 import { DashboardUtils, LocalStorageManager, URLManager, DeviceStateManager } from './utils';
 import { developmentConfig } from './config/development';
 import { TileRenderer } from './renderers/TileRenderer';
@@ -11,7 +11,7 @@ declare global {
 }
 
 class TileDashApp {
-	public config: DashboardConfig | null = null;
+	public config: AppConfig | null = null;
 	public tileRenderer: TileRenderer | null = null;
 	public homeyClient: HomeyClient | null = null;
 
@@ -281,7 +281,7 @@ class TileDashApp {
 		}
 	}
 
-	public async updateConfiguration( newConfig: DashboardConfig ): Promise<void> {
+	public async updateConfiguration( newConfig: AppConfig ): Promise<void> {
 		if ( !this.homeyClient ) {
 			throw new Error( 'HomeyClient is not initialized' );
 		}

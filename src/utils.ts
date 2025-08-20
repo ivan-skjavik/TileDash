@@ -1,4 +1,4 @@
-import { DashboardConfig, Tile, TileSettings } from './types.js';
+import { AppConfig, Tile, AppSettings } from './types.js';
 
 // Dashboard utilities and helpers
 export class DashboardUtils {
@@ -19,7 +19,7 @@ export class DashboardUtils {
              y2 + tile2.height <= y1 );
   }
 
-  static validateDashboardConfig( config: DashboardConfig ): string[] {
+  static validateDashboardConfig( config: AppConfig ): string[] {
     const errors: string[] = [];
     
     // Validate settings
@@ -89,7 +89,7 @@ export class DashboardUtils {
     return `tile-${Date.now()}-${Math.random().toString( 36 ).substr( 2, 9 )}`;
   }
 
-  static calculateOptimalTileSize( containerWidth: number, containerHeight: number, settings: TileSettings ): number {
+  static calculateOptimalTileSize( containerWidth: number, containerHeight: number, settings: AppSettings ): number {
     const baseSize = settings.tileSize || 80;
     const margin = settings.tileMargin || 5;
     
