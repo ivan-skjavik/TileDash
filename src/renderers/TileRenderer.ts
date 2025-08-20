@@ -393,35 +393,32 @@ export class TileRenderer {
 		if ( !this.container ) return;
 
 		// Create navigation container
-		const navPage = document.createElement( 'div' );
-		navPage.id = 'navPage';
-		navPage.className = 'nav-page';
-    
-		// Check orientation for responsive design
-		const orientation = window.innerHeight > window.innerWidth ? 'portrait' : 'landscape';
-		if ( orientation === 'portrait' ) {
-			navPage.classList.add( 'portrait' );
+		const navPage = document.getElementById( 'navPage' );
+
+		if ( !navPage ) {
+			console.error( 'Navigation page container not found' );
+			return;
 		}
+
+		navPage.classList.add( '--active' )
+		document.body.classList.add( '--nav-active' )
 
 		// Create page button container
 		const pageButtonContainer = document.createElement( 'div' );
 		pageButtonContainer.id = 'pageButtonContainer';
 		pageButtonContainer.className = 'page-button-container';
-		if ( orientation === 'portrait' ) {
-			pageButtonContainer.classList.add( 'portrait' );
-		}
 
 		// Create page buttons
 		pages.forEach( ( page, pageIndex ) => {
 			if ( page.icon ) {
 				const pageButton = document.createElement( 'div' );
 				pageButton.id = `pageButton-${pageIndex}`;
-				pageButton.className = 'pageButton';
+				pageButton.className = 'page-button';
 				pageButton.dataset.targetPage = pageIndex.toString();
         
 				// Set active for first page
 				if ( pageIndex === 0 ) {
-					pageButton.classList.add( 'active' );
+					pageButton.classList.add( '--active' );
 				}
 
 				// Add click handler
@@ -431,7 +428,7 @@ export class TileRenderer {
 
 				// Create icon
 				const pageIcon = document.createElement( 'div' );
-				pageIcon.className = `pageIcon mdi ${page.icon}`;
+				pageIcon.className = `page-icon mdi ${page.icon}`;
 
 				pageButton.appendChild( pageIcon );
 				pageButtonContainer.appendChild( pageButton );
@@ -451,12 +448,12 @@ export class TileRenderer {
 		console.log( `🧭 Navigating to page ${targetPageIndex}` );
 
 		// Update active button
-		const allPageButtons = document.querySelectorAll( '.pageButton' );
+		const allPageButtons = document.querySelectorAll( '.page-button' );
 		allPageButtons.forEach( ( button, index ) => {
 			if ( index === targetPageIndex ) {
-				button.classList.add( 'active' );
+				button.classList.add( '--active' );
 			} else {
-				button.classList.remove( 'active' );
+				button.classList.remove( '--active' );
 			}
 		} );
 

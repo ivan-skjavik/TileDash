@@ -197,6 +197,7 @@ export class URLManager {
 
 	static updateURL( params: Record<string, string> ): void {
 		const url = new URL( window.location.href );
+
 		Object.entries( params ).forEach( ( [ key, value, ] ) => {
 			if ( value ) {
 				url.searchParams.set( key, value );
@@ -204,13 +205,14 @@ export class URLManager {
 				url.searchParams.delete( key );
 			}
 		} );
+
 		window.history.replaceState( {}, '', url.toString() );
 	}
 }
 
 export class DeviceStateManager {
 	private static deviceStates = new Map<string, any>();
-	private static listeners = new Map<string, Set<Function>>();
+	private static listeners = new Map<string, Set<( newValue: any, oldValue: any ) => void>>();
 
 	static setState( deviceId: string, capabilityId: string, value: any ): void {
 		const key = `${deviceId}-${capabilityId}`;
@@ -227,7 +229,7 @@ export class DeviceStateManager {
 		return this.deviceStates.get( key );
 	}
 
-	static addListener( deviceId: string, capabilityId: string, callback: Function ): void {
+	static addListener( deviceId: string, capabilityId: string, callback: ( newValue: any, oldValue: any ) => void ): void {
 		const key = `${deviceId}-${capabilityId}`;
 		if ( !this.listeners.has( key ) ) {
 			this.listeners.set( key, new Set() );
@@ -235,7 +237,7 @@ export class DeviceStateManager {
     this.listeners.get( key )!.add( callback );
 	}
 
-	static removeListener( deviceId: string, capabilityId: string, callback: Function ): void {
+	static removeListener( deviceId: string, capabilityId: string, callback: ( newValue: any, oldValue: any ) => void ): void {
 		const key = `${deviceId}-${capabilityId}`;
 		const listenerSet = this.listeners.get( key );
 		if ( listenerSet ) {

@@ -18,7 +18,7 @@
   <link rel="apple-touch-icon" href="./img/favicon.png">
   
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css">
-  <link rel="stylesheet" href="./css/tiledash.css">
+  <!-- <link rel="stylesheet" href="./css/tiledash.css"> -->
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
@@ -33,26 +33,30 @@
   <body>
     <div id="flowContainerMobile"></div>
     
-    <header id="dashboardHeader">
-      <div id="headerLeft" class="headerLeft" style="display: none;">
-        <div id="currentTime"></div>
-        <div id="currentDate"></div>
-      </div>
+    <div id="mainGrid" class="dashboard-main-grid">
+      <div id="navPage" class="navigation"></div>
 
-      <div id="flowContainer"></div>
+      <header id="dashboardHeader" class="dashboard-header">
+        <div id="headerLeft" class="header-left" style="display: none;">
+          <div id="currentTime" class="current-time"></div>
+          <div id="currentDate" class="current-date"></div>
+        </div>
 
-      <div id="headerRight" class="headerRight">
-        <div id="customText" style="display: none;"></div>
-        <div id="headerValue" style="display: none;"></div>
-      </div>
-    </header>
+        <div id="flowContainer"></div>
+
+        <div id="headerRight" class="header-right">
+          <div id="customText" class="header-custom-text" style="display: none;"></div>
+          <div id="headerValue" class="header-value" style="display: none;"></div>
+        </div>
+      </header>
+
+      <div id="dashboardContainer" class="dashboard-group-container"></div>
+    </div>
 
     <div id="screenSaver"> 
       <img src="" alt="Screen Saver Image" id="screenSaverImage">
     </div>
     
-    <div id="dashboardContainer" class="group-container"></div>
-
     <div id="overlay" class="overlay"></div>
   </body>
 </html>

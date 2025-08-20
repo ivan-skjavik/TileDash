@@ -1,0 +1,50 @@
+/* Dark Theme
+ * Modern dark theme with subtle glows and high contrast
+ */
+
+[data-theme="dark"] {
+	/* ===== COLORS ===== */
+	--app-background: #1a1a1a;
+	--text-primary: #e8e8e8;
+	--text-secondary: #a0a0a0;
+	--border-color: #333333;
+	
+	/* Header */
+	--header-background: #2d2d2d;
+	--header-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+	
+	/* Navigation */
+	--nav-background: rgba(45, 45, 45, 0.95);
+	--nav-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+	--nav-radius: 2rem;
+	--nav-item-radius: 1.5rem;
+	--nav-item-color: #a0a0a0;
+	--nav-item-hover: rgba(64, 149, 255, 0.15);
+	--nav-item-hover-color: #4095ff;
+	--nav-item-active: #4095ff;
+	--nav-item-active-color: #1a1a1a;
+	
+	/* Tiles */
+	--tile-background: #2d2d2d;
+	--tile-border: #404040;
+	--tile-radius: 16px;
+	--tile-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+	--tile-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.3);
+	--tile-icon-color: #a0a0a0;
+	--tile-text-color: #e8e8e8;
+	--tile-value-color: #4095ff;
+	
+	/* Tile states */
+	--tile-on-background: #27ae60;
+	--tile-on-color: #ffffff;
+	--tile-on-border: #27ae60;
+	--tile-off-background: #404040;
+	--tile-off-color: #666666;
+	
+	/* Button/Theme toggle */
+	--button-background: #404040;
+	--button-hover-background: #4f4f4f;
+	
+	/* Footer */
+	--footer-background: transparent;
+}

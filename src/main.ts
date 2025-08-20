@@ -1,8 +1,12 @@
 import { AppConfig, DashboardConfig } from './types';
-import { DashboardUtils, LocalStorageManager, URLManager, DeviceStateManager } from './utils';
+import { DashboardUtils, URLManager, DeviceStateManager } from './utils';
 import { appConfig } from '../config';
 import { TileRenderer } from './renderers/TileRenderer';
 import HomeyClient from './services/HomeyClient';
+import { ThemeManager } from './services/ThemeManager';
+
+// Import SCSS styles
+import './styles/main.scss';
 
 declare global {
   interface Window {
@@ -14,8 +18,11 @@ class TileDashApp {
 	public config: AppConfig | null = null;
 	public tileRenderer: TileRenderer | null = null;
 	public homeyClient: HomeyClient | null = null;
+	public themeManager: ThemeManager;
 
 	constructor() {
+		// Initialize theme manager first
+		this.themeManager = new ThemeManager();
 		this.initializeApp();
 	}
 
@@ -43,6 +50,13 @@ class TileDashApp {
 			console.log( 'TileDashApp: Dashboard initialized' );
       
 			console.log( 'TileDash initialized successfully' );
+
+			// Set orientation and add eventlistener to catch orientation changes
+			document.body.classList.toggle( 'portrait', window.innerHeight > window.innerWidth );
+			window.addEventListener( 'resize', () => {
+				console.log( 'onResize' );
+				document.body.classList.toggle( 'portrait', window.innerHeight > window.innerWidth );
+			} );
 		} catch ( error ) {
 			console.error( 'Failed to initialize TileDash:', error );
 		}
@@ -76,35 +90,11 @@ class TileDashApp {
 	}
 
 	private initializeTheme(): void {
-		const theme = URLManager.getTheme() || LocalStorageManager.get<string>( 'theme' ) || 'tiledash';
-		this.applyTheme( theme );
-	}
-
-	private applyTheme( theme: string ): void {
-		const validThemes = [ 'tiledash', 'smooth-light', 'smooth-dark', ];
-		const selectedTheme = validThemes.includes( theme ) ? theme : 'tiledash';
-    
-		// Remove existing theme classes
-		document.body.classList.remove( ...validThemes );
-    
-		// Add selected theme class
-		document.body.classList.add( selectedTheme );
-    
-		// Load corresponding CSS file if not default
-		if ( selectedTheme !== 'tiledash' ) {
-			const existingLink = document.querySelector( `link[data-theme="${selectedTheme}"]` );
-
-			if ( !existingLink ) {
-				const link = document.createElement( 'link' );
-				link.rel = 'stylesheet';
-				link.href = `./css/${selectedTheme}.css`;
-				link.setAttribute( 'data-theme', selectedTheme );
-				document.head.appendChild( link );
-			}
-		}
-    
-		// Save theme preference
-		LocalStorageManager.set( 'theme', selectedTheme );
+		// Theme initialization is now handled by ThemeManager constructor
+		// We can add theme change listeners here if needed
+		this.themeManager.onThemeChange( ( theme: string ) => {
+			console.log( `Theme changed to: ${theme}` );
+		} );
 	}
 
 	private initializeTileRenderer(): void {
@@ -196,7 +186,11 @@ class TileDashApp {
 			// Set custom text
 			customText.textContent = this.config.settings.customText || 'TileDash';
 
-			//   TODO more stuff here probably (header sensor?)
+			// Add theme toggle button
+			const themeToggle = this.themeManager.createToggleButton();
+			themeToggle.style.marginLeft = '10px';
+			headerLeft.appendChild( themeToggle );
+
 			// Update time and date
 			this.updateTimeAndDate();
       
@@ -234,10 +228,8 @@ class TileDashApp {
 			this.config.settings.orientation = orientation;
 		}
 
-		const theme = URLManager.getTheme();
-		if ( theme ) {
-			this.applyTheme( theme );
-		}
+		// Theme URL override is now handled by ThemeManager constructor
+		// through URL parameters, so no need to handle it here
 	}
 
 	private initializeDeviceStateManagement(): void {

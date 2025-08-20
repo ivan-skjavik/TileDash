@@ -1,0 +1,10 @@
+/* TileDash Main Stylesheet
+ * Clean, minimal approach with separation of structure and theming
+ */
+
+/* App structure and layout (theme-independent) */
+@use 'app';
+
+/* Theme definitions (colors, shadows, borders only) */
+@use 'themes/light';
+@use 'themes/dark';
