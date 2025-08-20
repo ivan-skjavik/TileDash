@@ -74,7 +74,7 @@ export class SliderTile extends BaseTile {
 	private createSlider( capability: any, currentValue: number ): void {
 		const sliderContainer = document.createElement( 'div' );
 		sliderContainer.classList.add( 'sliderContainer' );
-        // TODO move to CSS
+		// TODO move to CSS
 		sliderContainer.style.cssText = `
       display: flex;
       justify-content: center;

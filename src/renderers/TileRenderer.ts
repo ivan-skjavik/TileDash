@@ -1,4 +1,4 @@
-import { Tile, DashboardGroup, DashboardPage, HomeyDevice, SliderTile as SliderTileConfig, SwitchTile as SwitchTileConfig, SensorTile as SensorTileConfig, ButtonTile as ButtonTileConfig, AppConfig } from '../types';
+import { Tile, DashboardPage, HomeyDevice, SliderTile as SliderTileConfig, SwitchTile as SwitchTileConfig, SensorTile as SensorTileConfig, ButtonTile as ButtonTileConfig, AppConfig } from '../types';
 import { BaseTile } from '../tiles/BaseTile';
 import { SliderTile } from '../tiles/SliderTile';
 import { SwitchTile } from '../tiles/SwitchTile';
@@ -117,24 +117,8 @@ export class TileRenderer {
 		tileElement.style.gridColumnStart = `${position[0] + 1}`;
 		tileElement.style.gridColumnEnd = `${position[0] + 1 + width}`;
 
-		tileElement.style.gridRowStart = `${position[1] + 2}`;
-		tileElement.style.gridRowEnd = `${position[1] + 2 + height};
-
-		// Base tile styling
-		// TODO move to CSS
-		// 	tileElement.style.cssText += `
-		//   position: relative;
-		//   display: flex;
-		//   flex-direction: column;
-		//   justify-content: center;
-		//   align-items: center;
-		//   padding: 8px;
-		//   border-radius: 8px;
-		//   transition: all 0.2s ease;
-		//   background: var(--tile-background, #fff);
-		//   border: 1px solid var(--tile-border, #e0e0e0);
-		//   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-		// `;
+		tileElement.style.gridRowStart = `${position[1] + 1}`;
+		tileElement.style.gridRowEnd = `${position[1] + 1 + height}`;
 
 		// Create tile instance
 		const tileInstance = this.createTileInstance( tileId, type, device, config, tileElement );
@@ -299,75 +283,21 @@ export class TileRenderer {
 			return;
 		}
 
-		console.log( `📄 Rendering page ${pageIndex} with ${page.groups.length} groups` );
-
 		// Create page container
 		const dashboardPage = document.createElement( 'div' );
 		dashboardPage.className = 'dashboard-page';
 		dashboardPage.id = `page-${pageIndex}`;
 
+		dashboardPage.style.gridTemplateColumns = `repeat(${page.width}, var(--tile-size))`;
+		dashboardPage.style.gridTemplateRows = `repeat(${page.height}, var(--tile-size))`;
+
 		dashboardPage.classList.toggle( '--active', pageIndex === this.currentPageIndex );
 
-		// Render each group
-		page.groups.forEach( ( group, groupIndex ) => {
-			this.renderGroup( group, devices, pageIndex, groupIndex, dashboardPage );
-		} );
-
-		// Add page to main container
-		this.container.appendChild( dashboardPage );
-
-		console.log( `📄 Rendered page ${pageIndex} with ${page.groups.length} groups` );
-	}
-
-	/**
-   * 3. Render a group with its tiles
-   */
-	public renderGroup(
-		group: DashboardGroup,
-		devices: Map<string, HomeyDevice>,
-		pageIndex: number,
-		groupIndex: number,
-		parentContainer: HTMLElement
-	): void {
-		console.log( `📦 Rendering group ${groupIndex} with ${group.tiles.length} tiles` );
-
-		// Create group container
-		const dashboardGroup = document.createElement( 'div' );
-		dashboardGroup.className = 'dashboard-group';
-		dashboardGroup.id = `page-${pageIndex}-group-${groupIndex}`;
-
-		// Add group title if provided
-		if ( group.title ) {
-			const titleElement = document.createElement( 'div' );
-			titleElement.className = 'group-title-container';
-			titleElement.innerHTML = `<div class="group-title">${group.title}</div>`;
-			dashboardGroup.appendChild( titleElement );
-		}
-
-		const itemsContainer = document.createElement( 'div' );
-		itemsContainer.className = 'items-container';
-		dashboardGroup.appendChild( itemsContainer );
-
-		// Set up group layout based on group dimensions
-		itemsContainer.style.gridTemplateColumns = `repeat(${group.width}, ${this.config.settings.tileSize || 80}px)`;
-		itemsContainer.style.gridTemplateRows = `${ this.config.settings.tileSize || 80 }px repeat(${group.height}, ${this.config.settings.tileSize || 80}px)`;
-
-		// // Set group to span number of cells by its width/height
-		// dashboardGroup.style.gridColumn = `span ${group.width}`;
-		// dashboardGroup.style.gridRow = `span ${group.height + 1}`;
-        
-		// Set cell padding
-		itemsContainer.style.columnGap =  `${this.config.settings.tileMargin || 5}px`;
-		itemsContainer.style.rowGap =  `${this.config.settings.tileMargin || 5}px`;
-		// groupContainer.style.padding = `${this.config.settings.tileMargin || 5}px`;
-
-
-
-		// Render tiles in this group
-		group.tiles.forEach( ( item, itemIndex ) => {
+		// Render tiles in this page
+		page.tiles.forEach( ( item, itemIndex ) => {
 			const deviceId = ( item as any ).id;
 			const device = deviceId ? devices.get( deviceId ) : null;
-			const tileId = `page-${pageIndex}-group-${groupIndex}-tile-${itemIndex}`;
+			const tileId = `page-${pageIndex}-tile-${itemIndex}`;
       
 			this.createTile(
 				tileId,
@@ -377,15 +307,67 @@ export class TileRenderer {
 				item.position,
 				item.width,
 				item.height,
-				itemsContainer
+				dashboardPage
 			);
 		} );
 
-		// Add group to page container
-		parentContainer.appendChild( dashboardGroup );
+		// Add page to main container
+		this.container.appendChild( dashboardPage );
 
-		console.log( `📦 Rendered group ${groupIndex} with ${group.tiles.length} tiles` );
+		console.log( `📄 Rendered page ${pageIndex} with ${page.tiles.length} tiles` );
 	}
+
+	/**
+   * 3. Render a group with its tiles
+   */
+	// public renderGroup(
+	// 	group: DashboardGroup,
+	// 	devices: Map<string, HomeyDevice>,
+	// 	pageIndex: number,
+	// 	groupIndex: number,
+	// 	parentContainer: HTMLElement
+	// ): void {
+	// 	console.log( `📦 Rendering group ${groupIndex} with ${group.tiles.length} tiles` );
+
+	// 	// Create group container
+	// 	const dashboardGroup = document.createElement( 'div' );
+	// 	dashboardGroup.className = 'dashboard-group';
+	// 	dashboardGroup.id = `page-${pageIndex}-group-${groupIndex}`;
+
+	// 	// Add group title if provided
+	// 	if ( group.title ) {
+	// 		const titleElement = document.createElement( 'div' );
+	// 		titleElement.className = 'group-title-container';
+	// 		titleElement.innerHTML = `<div class="group-title">${group.title}</div>`;
+	// 		dashboardGroup.appendChild( titleElement );
+	// 	}
+
+	// 	const itemsContainer = document.createElement( 'div' );
+	// 	itemsContainer.className = 'items-container';
+	// 	dashboardGroup.appendChild( itemsContainer );
+
+	// 	// Set up group layout based on group dimensions
+	// 	itemsContainer.style.gridTemplateColumns = `repeat(${group.width}, ${this.config.settings.tileSize || 80}px)`;
+	// 	itemsContainer.style.gridTemplateRows = `${ this.config.settings.tileSize || 80 }px repeat(${group.height}, ${this.config.settings.tileSize || 80}px)`;
+
+	// 	// // Set group to span number of cells by its width/height
+	// 	// dashboardGroup.style.gridColumn = `span ${group.width}`;
+	// 	// dashboardGroup.style.gridRow = `span ${group.height + 1}`;
+        
+	// 	// Set cell padding
+	// 	itemsContainer.style.columnGap =  `${this.config.settings.tileMargin || 5}px`;
+	// 	itemsContainer.style.rowGap =  `${this.config.settings.tileMargin || 5}px`;
+	// 	// groupContainer.style.padding = `${this.config.settings.tileMargin || 5}px`;
+
+
+
+		
+
+	// 	// Add group to page container
+	// 	parentContainer.appendChild( dashboardGroup );
+
+	// 	console.log( `📦 Rendered group ${groupIndex} with ${group.tiles.length} tiles` );
+	// }
 
 	/**
    * Create navigation bar for multi-page dashboards

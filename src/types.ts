@@ -57,7 +57,6 @@ export interface AppSettings {
   tileWidth?: number;
   tileHeight?: number;
   tileMargin: number;
-  groupMargin: number;
   orientation: 'landscape' | 'portrait';
   customText?: string;
   dateLocal: string;
@@ -81,11 +80,6 @@ export interface DashboardConfig {
 export interface DashboardPage {
   title?: string;
   icon: string;
-  groups: DashboardGroup[];
-}
-
-export interface DashboardGroup {
-  title?: string;
   width: number;
   height: number;
   tiles: Tile[];

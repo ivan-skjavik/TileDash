@@ -50,47 +50,33 @@ export class DashboardUtils {
 					errors.push( `Dashboard ${dashboardIndex + 1}, Page ${pageIndex + 1}: Icon is required` );
 				}
         
-				if ( !page.groups || !Array.isArray( page.groups ) ) {
-					errors.push( `Dashboard ${dashboardIndex + 1}, Page ${pageIndex + 1}: Groups are required and must be an array` );
-					return;
-				}
-        
-				// Validate each group
-				page.groups.forEach( ( group, groupIndex ) => {
-					if ( group.width <= 0 || group.height <= 0 ) {
-						errors.push( `Dashboard ${dashboardIndex + 1}, Page ${pageIndex + 1}, Group ${groupIndex + 1}: Width and height must be positive` );
-					}
+
           
-					if ( !group.tiles || !Array.isArray( group.tiles ) ) {
-						errors.push( `Dashboard ${dashboardIndex + 1}, Page ${pageIndex + 1}, Group ${groupIndex + 1}: Tiles are required and must be an array` );
-						return;
+				// Validate tiles in group
+				const usedIds = new Set<string>();
+				page.tiles.forEach( ( tile, tileIndex ) => {
+					// Check position validity
+					if ( !this.validateTilePosition( tile, page.width, page.height ) ) {
+						errors.push( `Dashboard ${dashboardIndex + 1}, Page ${pageIndex + 1}, Tile ${tileIndex + 1}: Position is invalid` );
 					}
-          
-					// Validate tiles in group
-					const usedIds = new Set<string>();
-					group.tiles.forEach( ( tile, tileIndex ) => {
-						// Check position validity
-						if ( !this.validateTilePosition( tile, group.width, group.height ) ) {
-							errors.push( `Dashboard ${dashboardIndex + 1}, Page ${pageIndex + 1}, Group ${groupIndex + 1}, Tile ${tileIndex + 1}: Position is invalid` );
-						}
             
-						// Check for overlaps with other tiles
-						group.tiles.slice( tileIndex + 1 ).forEach( ( otherTile, otherIndex ) => {
-							if ( this.checkTileOverlap( tile, otherTile ) ) {
-								errors.push( `Dashboard ${dashboardIndex + 1}, Page ${pageIndex + 1}, Group ${groupIndex + 1}: Tile ${tileIndex + 1} overlaps with tile ${tileIndex + otherIndex + 2}` );
-							}
-						} );
-            
-						// Check for duplicate IDs (for tiles that have IDs)
-						if ( 'id' in tile && tile.id ) {
-							const tileKey = `${tile.id}-${'capabilityID' in tile ? tile.capabilityID : ''}`;
-							if ( usedIds.has( tileKey ) ) {
-								errors.push( `Dashboard ${dashboardIndex + 1}, Page ${pageIndex + 1}, Group ${groupIndex + 1}: Duplicate device ID and capability combination: ${tileKey}` );
-							}
-							usedIds.add( tileKey );
+					// Check for overlaps with other tiles
+					page.tiles.slice( tileIndex + 1 ).forEach( ( otherTile, otherIndex ) => {
+						if ( this.checkTileOverlap( tile, otherTile ) ) {
+							errors.push( `Dashboard ${dashboardIndex + 1}, Page ${pageIndex + 1}: Tile ${tileIndex + 1} overlaps with tile ${tileIndex + otherIndex + 2}` );
 						}
 					} );
+            
+					// Check for duplicate IDs (for tiles that have IDs)
+					if ( 'id' in tile && tile.id ) {
+						const tileKey = `${tile.id}-${'capabilityID' in tile ? tile.capabilityID : ''}`;
+						if ( usedIds.has( tileKey ) ) {
+							errors.push( `Dashboard ${dashboardIndex + 1}, Page ${pageIndex + 1}: Duplicate device ID and capability combination: ${tileKey}` );
+						}
+						usedIds.add( tileKey );
+					}
 				} );
+		
 			} );
 		} );
     

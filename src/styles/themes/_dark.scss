@@ -1,29 +1,59 @@
 /* Dark Theme
  * Modern dark theme with subtle glows and high contrast
  */
+ $primary-color: #24ccb8;
 
 [data-theme="dark"] {
-	/* ===== COLORS ===== */
-	--app-background: #1a1a1a;
-    --text-body: #ffffffd7;
-	--text-primary: #e8e8e8;
-	--text-secondary: #a0a0a0;
-	--border-color: #333333;
-	
+	/* Shadows */
+	--app-box-shadow: rgba(0, 0, 0, 0.3) 0px 4px 12px;
+
+	/* Colors */
+	--app-background: #161e24;
+	--app-text-body: #ffffffd7;
+	--app-color-primary: #24ccb8;
+	--app-color-secondary: #a0a0a0;
+	--app-border-color: #333333;
+	--app-font-family: 'Helvetica Neue', Arial, sans-serif;
+	--app-line-height: 1.325;
+	--app-container-left-padding: 20px;
 	/* Header */
-	--header-background: #2d2d2d;
-	--header-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+	--header-background: transparent;
+	--header-shadow: none; //0 1px 3px rgba(0, 0, 0, 0.3);
+	--header-col-padding: 5px;
+
+	/* Header Tile */
+	--header-tile-background: transparent;
+	--header-tile-radius: 30px;
+	--header-tile-padding: 5px;
+	--header-tile-border: none;
+	--header-tile-shadow: none;
 	
 	/* Navigation */
-	--nav-background: rgba(45, 45, 45, 0.95);
-	--nav-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-	--nav-radius: 2rem;
+	--nav-background: #0a1113;
+	--nav-shadow: none; //0 8px 32px rgba(0, 0, 0, 0.3);
+	--nav-border: none; //1px solid #404040;
+	--nav-radius: 0;
+	--nav-width: 50px;
 	--nav-item-radius: 1.5rem;
+	--nav-item-background: #0a1113;
 	--nav-item-color: #a0a0a0;
 	--nav-item-hover: rgba(64, 149, 255, 0.15);
-	--nav-item-hover-color: #4095ff;
-	--nav-item-active: #4095ff;
-	--nav-item-active-color: #1a1a1a;
+	--nav-item-hover-color: #24ccb8;
+	--nav-item-active: #161e24;
+	--nav-item-active-color: #24ccb8;
+
+	/* Groups */
+	--group-background: #2d2d2d;
+	--group-border: 1px solid #404040;
+	--group-radius: 12px;
+	--group-title-height: 40px;
+	--group-title-background: #2d2d2d;
+	--group-title-color: #e8e8e8;
+	--group-title-padding: 15px;
+	--group-title-border: 1px solid #404040;
+	--group-title-font-weight: bold;
+	--group-title-font-size: 1.1rem;
+	--group-title-line-height: 1.5;
 	
 	/* Tiles */
 	--tile-background: #2d2d2d;

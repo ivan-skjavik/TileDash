@@ -89,7 +89,7 @@ class TileDashApp {
 
 		// Set tileMargin, groupMargin and iconSize as css vars
 		document.documentElement.style.setProperty( '--tile-margin', `${this.config.settings.tileMargin}px` );
-		document.documentElement.style.setProperty( '--group-margin', `${this.config.settings.groupMargin}px` );
+		document.documentElement.style.setProperty( '--tile-size', `${this.config.settings.tileSize}px` );
 		document.documentElement.style.setProperty( '--icon-size', `${this.config.settings.iconSize}px` );
 
 		console.log( 'TileDashApp: Configuration loaded from config.ts' );
@@ -183,14 +183,14 @@ class TileDashApp {
 		if ( !this.config ) return;
 
 		// Initialize header elements
-		const headerLeft = document.getElementById( 'headerLeft' );
+		const headerSecondary = document.getElementById( 'headerSecondary' );
 		const customText = document.getElementById( 'customText' );
 		const currentTime = document.getElementById( 'currentTime' );
 		const currentDate = document.getElementById( 'currentDate' );
 
-		if ( headerLeft && customText && currentTime && currentDate ) {
+		if ( headerSecondary && customText && currentTime && currentDate ) {
 			// Show header elements
-			headerLeft.style.display = 'flex';
+			headerSecondary.style.display = 'flex';
 			customText.style.display = 'flex';
 
 			// Set custom text
@@ -199,7 +199,7 @@ class TileDashApp {
 			// Add theme toggle button
 			const themeToggle = this.themeManager.createToggleButton();
 			themeToggle.style.marginLeft = '10px';
-			headerLeft.appendChild( themeToggle );
+			headerSecondary.appendChild( themeToggle );
 
 			// Update time and date
 			this.updateTimeAndDate();
