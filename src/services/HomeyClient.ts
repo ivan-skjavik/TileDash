@@ -74,7 +74,7 @@ export class HomeyClient {
    * Exchange authorization code for access token
    */
   private async authenticateWithCode( authCode: string ): Promise<boolean> {
-    console.log('authenticateWithCode', authCode);
+    console.log( 'authenticateWithCode', authCode );
     
     try {
       this.api = new AthomCloudAPI( {
@@ -135,7 +135,7 @@ export class HomeyClient {
       // Authenticate with Homey using the local strategy
       this.homeyApi = await this.homey.authenticate() as HomeyAPIV3LocalPatched;
 
-      console.log('homeyApi', this.homeyApi);
+      console.log( 'homeyApi', this.homeyApi );
       
       // Add wrapper methods to the HomeyAPI instance for backward compatibility
       this.addWrapperMethods();
@@ -147,7 +147,7 @@ export class HomeyClient {
       console.log( '✅ Successfully connected to Homey:', this.homey.id );
       
       // Log available properties to understand the API structure
-      console.log( '🔧 API properties:', Object.getOwnPropertyNames(this.homeyApi).filter(prop => !prop.startsWith('_')) );
+      console.log( '🔧 API properties:', Object.getOwnPropertyNames( this.homeyApi ).filter( prop => !prop.startsWith( '_' ) ) );
       
       return true;
       
@@ -163,29 +163,29 @@ export class HomeyClient {
    * Add wrapper methods to the HomeyAPI instance for backward compatibility
    */
   private addWrapperMethods(): void {
-    if (!this.homeyApi) return;
+    if ( !this.homeyApi ) return;
 
     // Add setCapabilityValue method directly to the API instance
-    (this.homeyApi as any).setCapabilityValue = async (deviceId: string, capabilityId: string, value: any) => {
-      return await this.setCapabilityValue(deviceId, capabilityId, value);
+    ( this.homeyApi as any ).setCapabilityValue = async ( deviceId: string, capabilityId: string, value: any ) => {
+      return await this.setCapabilityValue( deviceId, capabilityId, value );
     };
 
     // Add triggerFlow method directly to the API instance
-    (this.homeyApi as any).triggerFlow = async (flowId: string, tokens?: { [key: string]: any }) => {
-      return await this.triggerFlow(flowId, tokens);
+    ( this.homeyApi as any ).triggerFlow = async ( flowId: string, tokens?: { [key: string]: any } ) => {
+      return await this.triggerFlow( flowId, tokens );
     };
 
     // Add addDeviceListener method directly to the API instance
-    (this.homeyApi as any).addDeviceListener = async (deviceId: string, capabilityId: string, callback: (newValue: any, oldValue: any) => void) => {
-      return await this.addDeviceListener(deviceId, capabilityId, callback);
+    ( this.homeyApi as any ).addDeviceListener = async ( deviceId: string, capabilityId: string, callback: ( newValue: any, oldValue: any ) => void ) => {
+      return await this.addDeviceListener( deviceId, capabilityId, callback );
     };
 
     // Add removeDeviceListener method directly to the API instance
-    (this.homeyApi as any).removeDeviceListener = async (deviceId: string, capabilityId: string, callback: (newValue: any, oldValue: any) => void) => {
-      return await this.removeDeviceListener(deviceId, capabilityId, callback);
+    ( this.homeyApi as any ).removeDeviceListener = async ( deviceId: string, capabilityId: string, callback: ( newValue: any, oldValue: any ) => void ) => {
+      return await this.removeDeviceListener( deviceId, capabilityId, callback );
     };
 
-    console.log('✅ Added wrapper methods to HomeyAPI instance');
+    console.log( '✅ Added wrapper methods to HomeyAPI instance' );
   }
 
   async getDevices(): Promise<HomeyDevice[]> {

@@ -51,9 +51,9 @@ declare module 'homey-api' {
     zwave: HomeyAPIV3Local.ManagerZwave;
     
     // Extended methods added by HomeyClient for backward compatibility
-    setCapabilityValue: (deviceId: string, capabilityId: string, value: any) => Promise<void>;
-    triggerFlow: (flowId: string, tokens?: { [key: string]: any }) => Promise<void>;
-    addDeviceListener: (deviceId: string, capabilityId: string, callback: (newValue: any, oldValue: any) => void) => Promise<void>;
-    removeDeviceListener: (deviceId: string, capabilityId: string, callback: (newValue: any, oldValue: any) => void) => Promise<void>;
+    setCapabilityValue: ( deviceId: string, capabilityId: string, value: any ) => Promise<void>;
+    triggerFlow: ( flowId: string, tokens?: { [key: string]: any } ) => Promise<void>;
+    addDeviceListener: ( deviceId: string, capabilityId: string, callback: ( newValue: any, oldValue: any ) => void ) => Promise<void>;
+    removeDeviceListener: ( deviceId: string, capabilityId: string, callback: ( newValue: any, oldValue: any ) => void ) => Promise<void>;
   }
 }

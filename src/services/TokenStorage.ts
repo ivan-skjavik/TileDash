@@ -15,7 +15,7 @@ export class TokenStorage {
 
       const parsedData = JSON.parse( tokenData );
       // Check if we have token data with an access_token
-      return !!(parsedData && parsedData.token && parsedData.token.access_token);
+      return !!( parsedData && parsedData.token && parsedData.token.access_token );
     } catch ( error ) {
       console.error( 'Failed to check token validity:', error );
       return false;

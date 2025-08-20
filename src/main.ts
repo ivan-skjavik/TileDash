@@ -118,8 +118,8 @@ class TileDashApp {
 
   private initializeTileRenderer(): void {
     try {
-      if (!this.homeyClient) {
-        console.warn('HomeyClient not available - creating TileRenderer without Homey connection');
+      if ( !this.homeyClient ) {
+        console.warn( 'HomeyClient not available - creating TileRenderer without Homey connection' );
         // Create a mock HomeyClient for development mode
         const mockHomeyClient = {
           homeyApi: null,
@@ -267,7 +267,7 @@ class TileDashApp {
   }
 
   private initializeDeviceStateManagement(): void {
-    console.log('initializeDeviceStateManagement');
+    console.log( 'initializeDeviceStateManagement' );
     
     // Set up device state change listeners
     if ( typeof window.addEventListener === 'function' ) {

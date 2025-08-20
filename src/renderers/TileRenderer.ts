@@ -14,15 +14,15 @@ export class TileRenderer {
   private pages: DashboardPage[] = [];
   private deviceMap: Map<string, HomeyDevice> = new Map();
 
-  constructor(containerId: string, homeyClient: HomeyClient) {
-    console.log('TileRenderer: Constructor called with containerId:', containerId);
-    this.container = document.getElementById(containerId);
+  constructor( containerId: string, homeyClient: HomeyClient ) {
+    console.log( 'TileRenderer: Constructor called with containerId:', containerId );
+    this.container = document.getElementById( containerId );
     this.homeyClient = homeyClient;
 
-    if (!this.container) {
-      console.error(`TileRenderer: Container with id '${containerId}' not found!`);
+    if ( !this.container ) {
+      console.error( `TileRenderer: Container with id '${containerId}' not found!` );
     } else {
-      console.log('TileRenderer: Container found successfully', this.container);
+      console.log( 'TileRenderer: Container found successfully', this.container );
     }
 
     // Add keyboard navigation support
@@ -33,11 +33,11 @@ export class TileRenderer {
    * Set up keyboard navigation (arrow keys for page switching)
    */
   private setupKeyboardNavigation(): void {
-    document.addEventListener('keydown', (event) => {
+    document.addEventListener( 'keydown', ( event ) => {
       // Only handle navigation if we have multiple pages
-      if (this.pages.length <= 1) return;
+      if ( this.pages.length <= 1 ) return;
 
-      switch (event.key) {
+      switch ( event.key ) {
         case 'ArrowLeft':
           event.preventDefault();
           this.previousPage();
@@ -47,7 +47,7 @@ export class TileRenderer {
           this.nextPage();
           break;
       }
-    });
+    } );
   }
 
   /**
@@ -61,24 +61,24 @@ export class TileRenderer {
     element: HTMLElement
   ): BaseTile | null {
     const homeyApi = this.homeyClient.homeyApi;
-    if (!homeyApi) {
-      console.warn(`HomeyAPI not available for tile creation: ${type} - ${tileId}`);
+    if ( !homeyApi ) {
+      console.warn( `HomeyAPI not available for tile creation: ${type} - ${tileId}` );
       // Return null or create a mock tile for development
       return null;
     }
 
-    switch (type.toUpperCase()) {
+    switch ( type.toUpperCase() ) {
       case 'SLIDER':
-        return new SliderTile(tileId, device, config as SliderTileConfig, element, homeyApi);
+        return new SliderTile( tileId, device, config as SliderTileConfig, element, homeyApi );
       case 'SWITCH':
-        return new SwitchTile(tileId, device, config as SwitchTileConfig, element, homeyApi);
+        return new SwitchTile( tileId, device, config as SwitchTileConfig, element, homeyApi );
       case 'SENSOR':
       case 'BINARY_SENSOR':
-        return new SensorTile(tileId, device, config as SensorTileConfig, element, homeyApi);
+        return new SensorTile( tileId, device, config as SensorTileConfig, element, homeyApi );
       case 'BUTTON':
-        return new ButtonTile(tileId, device, config as ButtonTileConfig, element, homeyApi);
+        return new ButtonTile( tileId, device, config as ButtonTileConfig, element, homeyApi );
       default:
-        console.warn(`Unknown tile type: ${type}`);
+        console.warn( `Unknown tile type: ${type}` );
         return null;
     }
   }
@@ -98,16 +98,16 @@ export class TileRenderer {
   ): HTMLElement | null {
     const targetContainer = parentContainer || this.container;
     
-    if (!targetContainer) {
-      console.error('No container available for tile creation');
+    if ( !targetContainer ) {
+      console.error( 'No container available for tile creation' );
       return null;
     }
 
-    console.log(`🔲 Creating tile: ${tileId} (${type})`);
+    console.log( `🔲 Creating tile: ${tileId} (${type})` );
 
     // Create tile DOM element
-    const tileElement = document.createElement('div');
-    tileElement.classList.add('tile', `tile-${type.toLowerCase()}`);
+    const tileElement = document.createElement( 'div' );
+    tileElement.classList.add( 'tile', `tile-${type.toLowerCase()}` );
     tileElement.id = tileId;
     
     // Set grid position and size
@@ -130,42 +130,42 @@ export class TileRenderer {
     `;
 
     // Create tile instance
-    const tileInstance = this.createTileInstance(tileId, type, device, config, tileElement);
+    const tileInstance = this.createTileInstance( tileId, type, device, config, tileElement );
     
-    if (!tileInstance) {
-      console.error(`Failed to create tile instance for type: ${type}`);
+    if ( !tileInstance ) {
+      console.error( `Failed to create tile instance for type: ${type}` );
       return null;
     }
 
     // Register tile
-    this.tiles.set(tileId, tileInstance);
+    this.tiles.set( tileId, tileInstance );
 
     // Render tile content
     tileInstance.render();
 
     // Add to container
-    targetContainer.appendChild(tileElement);
+    targetContainer.appendChild( tileElement );
 
-    console.log(`✅ Created and registered tile: ${tileId} (${type})`);
+    console.log( `✅ Created and registered tile: ${tileId} (${type})` );
     return tileElement;
   }
 
   /**
    * Get a tile by ID
    */
-  public getTile(tileId: string): BaseTile | undefined {
-    return this.tiles.get(tileId);
+  public getTile( tileId: string ): BaseTile | undefined {
+    return this.tiles.get( tileId );
   }
 
   /**
    * Remove a tile
    */
-  public removeTile(tileId: string): void {
-    const tile = this.tiles.get(tileId);
-    if (tile) {
+  public removeTile( tileId: string ): void {
+    const tile = this.tiles.get( tileId );
+    if ( tile ) {
       tile.destroy();
-      this.tiles.delete(tileId);
-      console.log(`🗑️ Removed tile: ${tileId}`);
+      this.tiles.delete( tileId );
+      console.log( `🗑️ Removed tile: ${tileId}` );
     }
   }
 
@@ -173,47 +173,47 @@ export class TileRenderer {
    * Clear all tiles
    */
   public clearAllTiles(): void {
-    this.tiles.forEach((tile) => {
+    this.tiles.forEach( ( tile ) => {
       tile.destroy();
-    });
+    } );
     this.tiles.clear();
     
-    if (this.container) {
+    if ( this.container ) {
       this.container.innerHTML = '';
     }
     
-    console.log('🧹 Cleared all tiles');
+    console.log( '🧹 Cleared all tiles' );
   }
 
   /**
    * Update device state across all relevant tiles
    */
-  public updateDeviceState(deviceId: string, capability: string, newValue: any): void {
+  public updateDeviceState( deviceId: string, capability: string, newValue: any ): void {
     let updatedCount = 0;
     
-    this.tiles.forEach((tile) => {
-      if ((tile as any).device?.id === deviceId) {
-        tile.update(newValue, capability);
+    this.tiles.forEach( ( tile ) => {
+      if ( ( tile as any ).device?.id === deviceId ) {
+        tile.update( newValue, capability );
         updatedCount++;
       }
-    });
+    } );
     
-    if (updatedCount > 0) {
-      console.log(`🔄 Updated ${updatedCount} tiles for device ${deviceId}`);
+    if ( updatedCount > 0 ) {
+      console.log( `🔄 Updated ${updatedCount} tiles for device ${deviceId}` );
     }
   }
 
   /**
    * Get all tiles for a specific device
    */
-  public getTilesForDevice(deviceId: string): BaseTile[] {
+  public getTilesForDevice( deviceId: string ): BaseTile[] {
     const deviceTiles: BaseTile[] = [];
     
-    this.tiles.forEach((tile) => {
-      if ((tile as any).device?.id === deviceId) {
-        deviceTiles.push(tile);
+    this.tiles.forEach( ( tile ) => {
+      if ( ( tile as any ).device?.id === deviceId ) {
+        deviceTiles.push( tile );
       }
-    });
+    } );
     
     return deviceTiles;
   }
@@ -227,10 +227,10 @@ export class TileRenderer {
       tilesByType: {} as Record<string, number>
     };
 
-    this.tiles.forEach((tile) => {
+    this.tiles.forEach( ( tile ) => {
       const type = tile.constructor.name;
-      stats.tilesByType[type] = (stats.tilesByType[type] || 0) + 1;
-    });
+      stats.tilesByType[type] = ( stats.tilesByType[type] || 0 ) + 1;
+    } );
 
     return stats;
   }
@@ -243,10 +243,10 @@ export class TileRenderer {
     _settings: any,
     devices: HomeyDevice[]
   ): void {
-    console.log('🎨 Rendering dashboard with', pages.length, 'pages and', devices.length, 'devices');
+    console.log( '🎨 Rendering dashboard with', pages.length, 'pages and', devices.length, 'devices' );
     
-    if (!this.container) {
-      console.error('Container not available for dashboard rendering');
+    if ( !this.container ) {
+      console.error( 'Container not available for dashboard rendering' );
       return;
     }
 
@@ -259,25 +259,25 @@ export class TileRenderer {
     
     // Convert devices array to map for efficient lookup
     this.deviceMap.clear();
-    devices.forEach(device => {
-      this.deviceMap.set(device.id, device);
-    });
+    devices.forEach( device => {
+      this.deviceMap.set( device.id, device );
+    } );
 
     // Set up the main dashboard container
     this.container.innerHTML = '';
     this.container.className = 'dashboard-container';
 
     // Create navigation if there are multiple pages with icons
-    if (pages.length > 1 && pages.some(page => page.icon)) {
-      this.createNavigation(pages);
+    if ( pages.length > 1 && pages.some( page => page.icon ) ) {
+      this.createNavigation( pages );
     }
 
     // Render all pages (hidden except first one)
-    pages.forEach((page, pageIndex) => {
-      this.renderPage(page, this.deviceMap, pageIndex);
-    });
+    pages.forEach( ( page, pageIndex ) => {
+      this.renderPage( page, this.deviceMap, pageIndex );
+    } );
 
-    console.log(`🎨 Dashboard rendered with ${this.tiles.size} total tiles`);
+    console.log( `🎨 Dashboard rendered with ${this.tiles.size} total tiles` );
   }
 
   /**
@@ -288,15 +288,15 @@ export class TileRenderer {
     devices: Map<string, HomeyDevice>,
     pageIndex: number = 0
   ): void {
-    if (!this.container) {
-      console.error('Container not available for page rendering');
+    if ( !this.container ) {
+      console.error( 'Container not available for page rendering' );
       return;
     }
 
-    console.log(`📄 Rendering page ${pageIndex} with ${page.group.length} groups`);
+    console.log( `📄 Rendering page ${pageIndex} with ${page.group.length} groups` );
 
     // Create page container
-    const pageContainer = document.createElement('div');
+    const pageContainer = document.createElement( 'div' );
     pageContainer.className = 'dashboard-page page';
     pageContainer.id = `page-${pageIndex}`;
     pageContainer.style.cssText = `
@@ -308,14 +308,14 @@ export class TileRenderer {
     `;
 
     // Render each group
-    page.group.forEach((group, groupIndex) => {
-      this.renderGroup(group, devices, pageIndex, groupIndex, pageContainer);
-    });
+    page.group.forEach( ( group, groupIndex ) => {
+      this.renderGroup( group, devices, pageIndex, groupIndex, pageContainer );
+    } );
 
     // Add page to main container
-    this.container.appendChild(pageContainer);
+    this.container.appendChild( pageContainer );
 
-    console.log(`📄 Rendered page ${pageIndex} with ${page.group.length} groups`);
+    console.log( `📄 Rendered page ${pageIndex} with ${page.group.length} groups` );
   }
 
   /**
@@ -328,10 +328,10 @@ export class TileRenderer {
     groupIndex: number,
     parentContainer: HTMLElement
   ): void {
-    console.log(`📦 Rendering group ${groupIndex} with ${group.items.length} tiles`);
+    console.log( `📦 Rendering group ${groupIndex} with ${group.items.length} tiles` );
 
     // Create group container
-    const groupContainer = document.createElement('div');
+    const groupContainer = document.createElement( 'div' );
     groupContainer.className = 'group';
     groupContainer.id = `page-${pageIndex}-group-${groupIndex}`;
     
@@ -349,8 +349,8 @@ export class TileRenderer {
     //   background: var(--group-background, #fafafa);
 
     // Add group title if provided
-    if (group.title) {
-      const titleElement = document.createElement('div');
+    if ( group.title ) {
+      const titleElement = document.createElement( 'div' );
       titleElement.className = 'group-title';
       titleElement.textContent = group.title;
       titleElement.style.cssText = `
@@ -359,13 +359,13 @@ export class TileRenderer {
         margin-bottom: 8px;
         color: var(--text-color, #333);
       `;
-      groupContainer.appendChild(titleElement);
+      groupContainer.appendChild( titleElement );
     }
 
     // Render tiles in this group
-    group.items.forEach((item, itemIndex) => {
-      const deviceId = (item as any).id;
-      const device = deviceId ? devices.get(deviceId) : null;
+    group.items.forEach( ( item, itemIndex ) => {
+      const deviceId = ( item as any ).id;
+      const device = deviceId ? devices.get( deviceId ) : null;
       const tileId = `page-${pageIndex}-group-${groupIndex}-tile-${itemIndex}`;
       
       this.createTile(
@@ -378,101 +378,101 @@ export class TileRenderer {
         item.height,
         groupContainer
       );
-    });
+    } );
 
     // Add group to page container
-    parentContainer.appendChild(groupContainer);
+    parentContainer.appendChild( groupContainer );
 
-    console.log(`📦 Rendered group ${groupIndex} with ${group.items.length} tiles`);
+    console.log( `📦 Rendered group ${groupIndex} with ${group.items.length} tiles` );
   }
 
   /**
    * Create navigation bar for multi-page dashboards
    */
-  private createNavigation(pages: DashboardPage[]): void {
-    if (!this.container) return;
+  private createNavigation( pages: DashboardPage[] ): void {
+    if ( !this.container ) return;
 
     // Create navigation container
-    const navPage = document.createElement('div');
+    const navPage = document.createElement( 'div' );
     navPage.id = 'navPage';
     navPage.className = 'nav-page';
     
     // Check orientation for responsive design
     const orientation = window.innerHeight > window.innerWidth ? 'portrait' : 'landscape';
-    if (orientation === 'portrait') {
-      navPage.classList.add('portrait');
+    if ( orientation === 'portrait' ) {
+      navPage.classList.add( 'portrait' );
     }
 
     // Create page button container
-    const pageButtonContainer = document.createElement('div');
+    const pageButtonContainer = document.createElement( 'div' );
     pageButtonContainer.id = 'pageButtonContainer';
     pageButtonContainer.className = 'page-button-container';
-    if (orientation === 'portrait') {
-      pageButtonContainer.classList.add('portrait');
+    if ( orientation === 'portrait' ) {
+      pageButtonContainer.classList.add( 'portrait' );
     }
 
     // Create page buttons
-    pages.forEach((page, pageIndex) => {
-      if (page.icon) {
-        const pageButton = document.createElement('div');
+    pages.forEach( ( page, pageIndex ) => {
+      if ( page.icon ) {
+        const pageButton = document.createElement( 'div' );
         pageButton.id = `pageButton-${pageIndex}`;
         pageButton.className = 'pageButton';
         pageButton.dataset.targetPage = pageIndex.toString();
         
         // Set active for first page
-        if (pageIndex === 0) {
-          pageButton.classList.add('active');
+        if ( pageIndex === 0 ) {
+          pageButton.classList.add( 'active' );
         }
 
         // Add click handler
-        pageButton.addEventListener('click', () => {
-          this.navigateToPage(pageIndex);
-        });
+        pageButton.addEventListener( 'click', () => {
+          this.navigateToPage( pageIndex );
+        } );
 
         // Create icon
-        const pageIcon = document.createElement('div');
+        const pageIcon = document.createElement( 'div' );
         pageIcon.className = `pageIcon mdi ${page.icon}`;
 
-        pageButton.appendChild(pageIcon);
-        pageButtonContainer.appendChild(pageButton);
+        pageButton.appendChild( pageIcon );
+        pageButtonContainer.appendChild( pageButton );
       }
-    });
+    } );
 
-    navPage.appendChild(pageButtonContainer);
-    this.container.appendChild(navPage);
+    navPage.appendChild( pageButtonContainer );
+    this.container.appendChild( navPage );
 
-    console.log('🧭 Navigation created with', pages.length, 'page buttons');
+    console.log( '🧭 Navigation created with', pages.length, 'page buttons' );
   }
 
   /**
    * Navigate to a specific page
    */
-  private navigateToPage(targetPageIndex: number): void {
-    console.log(`🧭 Navigating to page ${targetPageIndex}`);
+  private navigateToPage( targetPageIndex: number ): void {
+    console.log( `🧭 Navigating to page ${targetPageIndex}` );
 
     // Update active button
-    const allPageButtons = document.querySelectorAll('.pageButton');
-    allPageButtons.forEach((button, index) => {
-      if (index === targetPageIndex) {
-        button.classList.add('active');
+    const allPageButtons = document.querySelectorAll( '.pageButton' );
+    allPageButtons.forEach( ( button, index ) => {
+      if ( index === targetPageIndex ) {
+        button.classList.add( 'active' );
       } else {
-        button.classList.remove('active');
+        button.classList.remove( 'active' );
       }
-    });
+    } );
 
     // Show/hide pages
-    const allPages = document.querySelectorAll('.page');
-    allPages.forEach((page, index) => {
+    const allPages = document.querySelectorAll( '.page' );
+    allPages.forEach( ( page, index ) => {
       const pageElement = page as HTMLElement;
-      if (index === targetPageIndex) {
+      if ( index === targetPageIndex ) {
         pageElement.style.display = 'grid';
       } else {
         pageElement.style.display = 'none';
       }
-    });
+    } );
 
     this.currentPageIndex = targetPageIndex;
-    console.log(`✅ Navigated to page ${targetPageIndex}`);
+    console.log( `✅ Navigated to page ${targetPageIndex}` );
   }
 
   /**
@@ -486,8 +486,8 @@ export class TileRenderer {
    * Switch to next page
    */
   public nextPage(): void {
-    if (this.currentPageIndex < this.pages.length - 1) {
-      this.navigateToPage(this.currentPageIndex + 1);
+    if ( this.currentPageIndex < this.pages.length - 1 ) {
+      this.navigateToPage( this.currentPageIndex + 1 );
     }
   }
 
@@ -495,25 +495,25 @@ export class TileRenderer {
    * Switch to previous page
    */
   public previousPage(): void {
-    if (this.currentPageIndex > 0) {
-      this.navigateToPage(this.currentPageIndex - 1);
+    if ( this.currentPageIndex > 0 ) {
+      this.navigateToPage( this.currentPageIndex - 1 );
     }
   }
 
   /**
    * Update devices in the tile renderer
    */
-  public updateDevices(devices: HomeyDevice[]): void {
-    console.log('🔄 Updating devices in tile renderer:', devices.length, 'devices');
+  public updateDevices( devices: HomeyDevice[] ): void {
+    console.log( '🔄 Updating devices in tile renderer:', devices.length, 'devices' );
     
-    devices.forEach(device => {
+    devices.forEach( device => {
       // Update all tiles that use this device
-      const deviceTiles = this.getTilesForDevice(device.id);
-      deviceTiles.forEach(_tile => {
+      const deviceTiles = this.getTilesForDevice( device.id );
+      deviceTiles.forEach( _tile => {
         // Trigger a re-render or update for this tile
-        console.log(`🔄 Updating tile for device: ${device.name}`);
+        console.log( `🔄 Updating tile for device: ${device.name}` );
         // The tile should handle its own updates through device listeners
-      });
-    });
+      } );
+    } );
   }
 }

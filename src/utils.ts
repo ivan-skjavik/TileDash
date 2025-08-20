@@ -13,10 +13,10 @@ export class DashboardUtils {
     const [x1, y1] = tile1.position;
     const [x2, y2] = tile2.position;
     
-    return !(x1 + tile1.width <= x2 || 
+    return !( x1 + tile1.width <= x2 || 
              x2 + tile2.width <= x1 || 
              y1 + tile1.height <= y2 || 
-             y2 + tile2.height <= y1);
+             y2 + tile2.height <= y1 );
   }
 
   static validateDashboardConfig( config: DashboardConfig ): string[] {
@@ -156,7 +156,7 @@ export class URLManager {
   // OAuth-related methods
   static getAuthorizationCode(): string | null {
     const urlParams = new URLSearchParams( window.location.search );
-    console.log('auth code in url:', urlParams.get('auth_code'));
+    console.log( 'auth code in url:', urlParams.get( 'auth_code' ) );
     return urlParams.get( 'auth_code' );
   }
 
