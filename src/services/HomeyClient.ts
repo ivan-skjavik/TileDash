@@ -9,9 +9,25 @@ export class HomeyClient {
 	private homeyApi: HomeyAPIV3LocalPatched | null = null;
 	private homey: AthomCloudAPI.Homey | null = null;
 	public isConnected: boolean = false;
-	private CLIENT_ID = '68a4480a49ea3fdd32f34e00'; // TODO store in .env
-	private CLIENT_SECRET = '4976498ae7a1851c3e1abb3fa60eeb44'; // TODO store in .env
-	private REDIRECT_URL = 'http://localhost:3000/auth/callback'; // Use Vite dev server with proxy // TODO store in .env
+	private CLIENT_ID: string;
+	private CLIENT_SECRET: string;
+	private REDIRECT_URL: string;
+
+	constructor() {
+		// Load OAuth credentials from environment variables
+		this.CLIENT_ID = import.meta.env.VITE_HOMEY_CLIENT_ID || '';
+		this.CLIENT_SECRET = import.meta.env.VITE_HOMEY_CLIENT_SECRET || '';
+		this.REDIRECT_URL = import.meta.env.VITE_HOMEY_REDIRECT_URL || 'http://localhost:3000/auth/callback';
+
+		// Validate that required credentials are available
+		if ( !this.CLIENT_ID || !this.CLIENT_SECRET ) {
+			throw new Error( 
+				'Homey OAuth credentials are required. Please set VITE_HOMEY_CLIENT_ID and VITE_HOMEY_CLIENT_SECRET in your .env file.'
+			);
+		}
+
+		console.log( '🔐 HomeyClient initialized with environment credentials' );
+	}
 
 	/**
     * Initialize OAuth flow or connect with existing token
