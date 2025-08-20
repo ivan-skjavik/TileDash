@@ -4,21 +4,36 @@
 
 :root,
 [data-theme="light"] {
-	/* ===== COLORS ===== */
-	--app-background: #fafafa;
-    --text-body: #333;
-	--text-primary: #2c3e50;
-	--text-secondary: #7f8c8d;
-	--border-color: #ecf0f1;
-	
+    /* Shadows */
+    --app-box-shadow: rgba(0, 0, 0, 0.08) 0px 4px 12px; //box-shadow: rgba(0, 0, 0, 0.07) 0px 1px 1px, rgba(0, 0, 0, 0.07) 0px 2px 2px, rgba(0, 0, 0, 0.07) 0px 4px 4px, rgba(0, 0, 0, 0.07) 0px 8px 8px, rgba(0, 0, 0, 0.07) 0px 16px 16px;
+
+	/* Colors */
+	--app-background: #e2e2e2;
+    --app-text-body: #333;
+	--app-text-primary: #2c3e50;
+	--app-text-secondary: #7f8c8d;
+	--app-border-color: #ecf0f1;
+    --app-font-family: 'Helvetica Neue', Arial, sans-serif;
+    --app-line-height: 1.325;
+
 	/* Header */
-	--header-background: #ffffff;
-	--header-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	--header-background: transparent;
+	--header-shadow: none;
+    --header-col-padding: 1.5rem;
+
+    /* Header Tile */
+    --header-tile-background: #ffffff;
+    --header-tile-radius: 30px;
+    --header-tile-padding: 1.0rem;
+    --header-tile-border: 1px solid #33333318;
+    --header-tile-shadow: 0 4px 15px -2px rgba(0, 0, 0, 0.12);
 	
 	/* Navigation */
 	--nav-background: rgba(255, 255, 255, 0.95);
-	--nav-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+	--nav-shadow: 0 4px 15px -2px rgba(0, 0, 0, 0.12);
+    --nav-border: 1px solid #33333318;
 	--nav-radius: 2rem;
+    --nav-width: 50px;
 	--nav-item-radius: 1.5rem;
     --nav-item-background: #ebebeb;
 	--nav-item-color: #7f8c8d;
@@ -26,7 +41,20 @@
 	--nav-item-hover-color: #3498db;
 	--nav-item-active: #758996;
 	--nav-item-active-color: #ffffff;
-	
+
+	/* Groups */
+	--group-background: #f1f1f1;
+	--group-border: 1px solid #33333318;
+	--group-radius: 12px;
+    --group-title-height: 40px;
+    --group-title-background: #ffffff;
+    --group-title-color: #333333;
+    --group-title-padding: 15px;
+    --group-title-border: 1px solid #33333318;
+    --group-title-font-weight: bold;
+    --group-title-font-size: 1.1rem;
+    --group-title-line-height: 1.5;
+
 	/* Tiles */
 	--tile-background: #ffffff;
 	--tile-border: transparent;
@@ -47,7 +75,4 @@
 	/* Button/Theme toggle */
 	--button-background: #ecf0f1;
 	--button-hover-background: #d5dbdb;
-	
-	/* Footer */
-	--footer-background: transparent;
 }

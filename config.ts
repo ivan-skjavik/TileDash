@@ -4,12 +4,12 @@ import { AppConfig } from './src/types';
 export const appConfig: AppConfig = {
 	settings: {
 		tileSize: 80,
-		tileMargin: 5,
-		groupMargin: 10,
+		tileMargin: 10,
+		groupMargin: 20,
+		iconSize: 40,
 		orientation: "landscape",
 		customText: "TileDash Development",
 		dateLocal: "en-EN",
-		iconSize: 40,
 		numOfLandImg: 4,
 		numOfPortImg: 5,
 		backgroundImage: "./img/hexagone.jpg",
@@ -31,9 +31,9 @@ export const appConfig: AppConfig = {
 					icon: 'mdi-home',
 					groups: [
 						{
-							title: "Development Tiles 1",
-							width: 8,
-							height: 9,
+							title: "Development Group 1",
+							width: 4,
+							height: 7,
 							tiles: [
 								{
 									position: [ 0, 0, ],
@@ -60,11 +60,11 @@ export const appConfig: AppConfig = {
 									id: "tile-image-1", // Define which id you want but use a different id for each IMAGE type in your dashboard
 								},
 								TileFactory.createConfig( 'SLIDER', {
-									position: [ 2, 3, ],
+									position: [ 0, 3, ],
 									id: "56b58d98-3604-42e7-9945-8575d88fd8f3",
 									name: "Taklys Kontor",
 									orientation: 'horizontal', 
-									width: 4,
+									width: 3,
 									height: 1,
 									minValue: 0, 
 									maxValue: 1,
@@ -73,7 +73,7 @@ export const appConfig: AppConfig = {
 									icon: "mdi-lightbulb",
 								} ),
 								TileFactory.createConfig( 'SLIDER', {
-									position: [ 2, 4, ],
+									position: [ 0, 4, ],
 									id: "15575f05-1d5c-4c37-95d6-2fce7f4712b1",
 									name: "Taklys Loftstue",
 									orientation: 'horizontal',
@@ -86,7 +86,7 @@ export const appConfig: AppConfig = {
 									icon: "mdi-lightbulb",
 								} ),
 								{
-									position: [ 2, 5, ],
+									position: [ 0, 5, ],
 									id: "20dcccf8-3734-4a67-994b-1f6171af177c",
 									name: "Taklys Bad",
 									type: "SLIDER",
@@ -100,7 +100,7 @@ export const appConfig: AppConfig = {
 									icon: "mdi-lightbulb",
 								},
 								{
-									position: [ 2, 6, ],
+									position: [ 0, 6, ],
 									name: "Baklys TV",
 									type: "SLIDER",
 									orientation: 'horizontal', 
@@ -143,6 +143,39 @@ export const appConfig: AppConfig = {
 										},
 									},
 								},
+							],
+						},
+						{
+							title: "Group 2",
+							width: 3,
+							height: 6,
+							tiles: [
+								TileFactory.createConfig( 'SLIDER', {
+									position: [ 0, 0, ],
+									id: "56b58d98-3604-42e7-9945-8575d88fd8f3",
+									name: "Taklys Kontor",
+									orientation: 'horizontal', 
+									width: 3,
+									height: 1,
+									minValue: 0, 
+									maxValue: 1,
+									step: 0.01,
+									capabilityID: "dim",
+									icon: "mdi-lightbulb",
+								} ),
+								TileFactory.createConfig( 'SLIDER', {
+									position: [ 0, 1, ],
+									id: "15575f05-1d5c-4c37-95d6-2fce7f4712b1",
+									name: "Taklys Loftstue",
+									orientation: 'horizontal',
+									width: 4,
+									height: 1,
+									minValue: 0, 
+									maxValue: 1, 
+									step: 0.01, 
+									capabilityID: "dim",
+									icon: "mdi-lightbulb",
+								} ),
 							],
 						},
 					],

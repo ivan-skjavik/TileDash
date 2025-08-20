@@ -95,6 +95,7 @@ public destroy(): void {
 protected createIcon( iconName: string, size: number = 24 ): HTMLElement {
 	const iconContainer = document.createElement( 'div' );
 	iconContainer.classList.add( 'icon' );
+    // TODO move to CSS
 	iconContainer.style.cssText = `
 display: flex;
 justify-content: center;
@@ -114,6 +115,7 @@ protected createNameElement( name: string, small: boolean = false ): HTMLElement
 	const nameElement = document.createElement( 'div' );
 	nameElement.classList.add( 'tile-name' );
 	nameElement.textContent = name;
+    // TODO move to CSS
 	nameElement.style.cssText = `
 font-size: ${small ? '10px' : '12px'};
 font-weight: 500;
@@ -132,6 +134,7 @@ protected createValueElement( value: any, unit: string = '', size: string = '14p
 	const valueElement = document.createElement( 'div' );
 	valueElement.classList.add( 'tile-value' );
 	valueElement.textContent = `${value}${unit}`;
+    // TODO move to CSS
 	valueElement.style.cssText = `
 font-size: ${size};
 font-weight: 600;

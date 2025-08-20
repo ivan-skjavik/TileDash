@@ -1,4 +1,4 @@
-import { Tile, DashboardGroup, DashboardPage, HomeyDevice, SliderTile as SliderTileConfig, SwitchTile as SwitchTileConfig, SensorTile as SensorTileConfig, ButtonTile as ButtonTileConfig } from '../types';
+import { Tile, DashboardGroup, DashboardPage, HomeyDevice, SliderTile as SliderTileConfig, SwitchTile as SwitchTileConfig, SensorTile as SensorTileConfig, ButtonTile as ButtonTileConfig, AppConfig } from '../types';
 import { BaseTile } from '../tiles/BaseTile';
 import { SliderTile } from '../tiles/SliderTile';
 import { SwitchTile } from '../tiles/SwitchTile';
@@ -13,11 +13,14 @@ export class TileRenderer {
 	private currentPageIndex: number = 0;
 	private pages: DashboardPage[] = [];
 	private deviceMap: Map<string, HomeyDevice> = new Map();
+	private config: AppConfig;
 
-	constructor( containerId: string, homeyClient: HomeyClient ) {
+	constructor( containerId: string, homeyClient: HomeyClient, config: AppConfig ) {
 		console.log( 'TileRenderer: Constructor called with containerId:', containerId );
+
 		this.container = document.getElementById( containerId );
 		this.homeyClient = homeyClient;
+		this.config = config;
 
 		if ( !this.container ) {
 			console.error( `TileRenderer: Container with id '${containerId}' not found!` );
@@ -111,23 +114,27 @@ export class TileRenderer {
 		tileElement.id = tileId;
     
 		// Set grid position and size
-		tileElement.style.gridColumn = `${position[0] + 1} / span ${width}`;
-		tileElement.style.gridRow = `${position[1] + 1} / span ${height}`;
-    
+		tileElement.style.gridColumnStart = `${position[0] + 1}`;
+		tileElement.style.gridColumnEnd = `${position[0] + 1 + width}`;
+
+		tileElement.style.gridRowStart = `${position[1] + 2}`;
+		tileElement.style.gridRowEnd = `${position[1] + 2 + height};
+
 		// Base tile styling
-		tileElement.style.cssText += `
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 8px;
-      border-radius: 8px;
-      transition: all 0.2s ease;
-      background: var(--tile-background, #fff);
-      border: 1px solid var(--tile-border, #e0e0e0);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    `;
+		// TODO move to CSS
+		// 	tileElement.style.cssText += `
+		//   position: relative;
+		//   display: flex;
+		//   flex-direction: column;
+		//   justify-content: center;
+		//   align-items: center;
+		//   padding: 8px;
+		//   border-radius: 8px;
+		//   transition: all 0.2s ease;
+		//   background: var(--tile-background, #fff);
+		//   border: 1px solid var(--tile-border, #e0e0e0);
+		//   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+		// `;
 
 		// Create tile instance
 		const tileInstance = this.createTileInstance( tileId, type, device, config, tileElement );
@@ -265,7 +272,6 @@ export class TileRenderer {
 
 		// Set up the main dashboard container
 		this.container.innerHTML = '';
-		this.container.className = 'dashboard-container';
 
 		// Create navigation if there are multiple pages with icons
 		if ( pages.length > 1 && pages.some( page => page.icon ) ) {
@@ -296,24 +302,19 @@ export class TileRenderer {
 		console.log( `📄 Rendering page ${pageIndex} with ${page.groups.length} groups` );
 
 		// Create page container
-		const pageContainer = document.createElement( 'div' );
-		pageContainer.className = 'dashboard-page page';
-		pageContainer.id = `page-${pageIndex}`;
-		pageContainer.style.cssText = `
-      display: ${pageIndex === 0 ? 'grid' : 'none'};
-      gap: 16px;
-      padding: 16px;
-      width: 100%;
-      height: 100%;
-    `;
+		const dashboardPage = document.createElement( 'div' );
+		dashboardPage.className = 'dashboard-page';
+		dashboardPage.id = `page-${pageIndex}`;
+
+		dashboardPage.classList.toggle( '--active', pageIndex === this.currentPageIndex );
 
 		// Render each group
 		page.groups.forEach( ( group, groupIndex ) => {
-			this.renderGroup( group, devices, pageIndex, groupIndex, pageContainer );
+			this.renderGroup( group, devices, pageIndex, groupIndex, dashboardPage );
 		} );
 
 		// Add page to main container
-		this.container.appendChild( pageContainer );
+		this.container.appendChild( dashboardPage );
 
 		console.log( `📄 Rendered page ${pageIndex} with ${page.groups.length} groups` );
 	}
@@ -331,36 +332,36 @@ export class TileRenderer {
 		console.log( `📦 Rendering group ${groupIndex} with ${group.tiles.length} tiles` );
 
 		// Create group container
-		const groupContainer = document.createElement( 'div' );
-		groupContainer.className = 'group';
-		groupContainer.id = `page-${pageIndex}-group-${groupIndex}`;
-    
-		// TODO handle more styles via css to enable better theming
-		// Set up group layout based on group dimensions
-		groupContainer.style.cssText = `
-      display: grid;
-      grid-template-columns: repeat(${group.width}, 1fr);
-      grid-template-rows: repeat(${group.height}, 1fr);
-      gap: 8px;
-      border-radius: 8px;
-      padding: 8px;
-      `;
-		//   border: 1px solid var(--group-border, #e0e0e0);
-		//   background: var(--group-background, #fafafa);
+		const dashboardGroup = document.createElement( 'div' );
+		dashboardGroup.className = 'dashboard-group';
+		dashboardGroup.id = `page-${pageIndex}-group-${groupIndex}`;
 
 		// Add group title if provided
 		if ( group.title ) {
 			const titleElement = document.createElement( 'div' );
-			titleElement.className = 'group-title';
-			titleElement.textContent = group.title;
-			titleElement.style.cssText = `
-        grid-column: 1 / -1;
-        font-weight: 600;
-        margin-bottom: 8px;
-        color: var(--text-color, #333);
-      `;
-			groupContainer.appendChild( titleElement );
+			titleElement.className = 'group-title-container';
+			titleElement.innerHTML = `<div class="group-title">${group.title}</div>`;
+			dashboardGroup.appendChild( titleElement );
 		}
+
+		const itemsContainer = document.createElement( 'div' );
+		itemsContainer.className = 'items-container';
+		dashboardGroup.appendChild( itemsContainer );
+
+		// Set up group layout based on group dimensions
+		itemsContainer.style.gridTemplateColumns = `repeat(${group.width}, ${this.config.settings.tileSize || 80}px)`;
+		itemsContainer.style.gridTemplateRows = `${ this.config.settings.tileSize || 80 }px repeat(${group.height}, ${this.config.settings.tileSize || 80}px)`;
+
+		// // Set group to span number of cells by its width/height
+		// dashboardGroup.style.gridColumn = `span ${group.width}`;
+		// dashboardGroup.style.gridRow = `span ${group.height + 1}`;
+        
+		// Set cell padding
+		itemsContainer.style.columnGap =  `${this.config.settings.tileMargin || 5}px`;
+		itemsContainer.style.rowGap =  `${this.config.settings.tileMargin || 5}px`;
+		// groupContainer.style.padding = `${this.config.settings.tileMargin || 5}px`;
+
+
 
 		// Render tiles in this group
 		group.tiles.forEach( ( item, itemIndex ) => {
@@ -376,12 +377,12 @@ export class TileRenderer {
 				item.position,
 				item.width,
 				item.height,
-				groupContainer
+				itemsContainer
 			);
 		} );
 
 		// Add group to page container
-		parentContainer.appendChild( groupContainer );
+		parentContainer.appendChild( dashboardGroup );
 
 		console.log( `📦 Rendered group ${groupIndex} with ${group.tiles.length} tiles` );
 	}
@@ -436,8 +437,6 @@ export class TileRenderer {
 		} );
 
 		navPage.appendChild( pageButtonContainer );
-		this.container.appendChild( navPage );
-
 		console.log( '🧭 Navigation created with', pages.length, 'page buttons' );
 	}
 
@@ -458,14 +457,10 @@ export class TileRenderer {
 		} );
 
 		// Show/hide pages
-		const allPages = document.querySelectorAll( '.page' );
+		const allPages = document.querySelectorAll( '.dashboard-page' );
 		allPages.forEach( ( page, index ) => {
 			const pageElement = page as HTMLElement;
-			if ( index === targetPageIndex ) {
-				pageElement.style.display = 'grid';
-			} else {
-				pageElement.style.display = 'none';
-			}
+			pageElement.classList.toggle( '--active', index === targetPageIndex )
 		} );
 
 		this.currentPageIndex = targetPageIndex;

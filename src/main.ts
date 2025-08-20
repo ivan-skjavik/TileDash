@@ -86,6 +86,12 @@ class TileDashApp {
 	private async loadConfiguration(): Promise<void> {
 		// Load configuration from config.ts file
 		this.config = appConfig;
+
+		// Set tileMargin, groupMargin and iconSize as css vars
+		document.documentElement.style.setProperty( '--tile-margin', `${this.config.settings.tileMargin}px` );
+		document.documentElement.style.setProperty( '--group-margin', `${this.config.settings.groupMargin}px` );
+		document.documentElement.style.setProperty( '--icon-size', `${this.config.settings.iconSize}px` );
+
 		console.log( 'TileDashApp: Configuration loaded from config.ts' );
 	}
 
@@ -103,8 +109,12 @@ class TileDashApp {
 				throw new Error( 'HomeyClient not available' )
 			}
 
+			if ( !this.config ) {
+				throw new Error( 'AppConfig not available' );
+			}
+
 			// Initialization with HomeyClient
-			this.tileRenderer = new TileRenderer( 'dashboardContainer', this.homeyClient );
+			this.tileRenderer = new TileRenderer( 'dashboardContainer', this.homeyClient, this.config );
 		} catch ( error ) {
 			console.error( 'Failed to initialize tile renderer:', error );
 		}

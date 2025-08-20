@@ -33,16 +33,18 @@
   <body>
     <div id="flowContainerMobile"></div>
     
+    <div id="navPage" class="navigation"></div>
+    
     <div id="mainGrid" class="dashboard-main-grid">
-      <div id="navPage" class="navigation"></div>
-
       <header id="dashboardHeader" class="dashboard-header">
         <div id="headerLeft" class="header-left" style="display: none;">
-          <div id="currentTime" class="current-time"></div>
-          <div id="currentDate" class="current-date"></div>
+          <div class="time-date-container">
+            <div id="currentTime" class="current-time"></div>
+            <div id="currentDate" class="current-date"></div>
+          </div>
         </div>
 
-        <div id="flowContainer"></div>
+        <div id="flowContainer" class="header-flow-container"></div>
 
         <div id="headerRight" class="header-right">
           <div id="customText" class="header-custom-text" style="display: none;"></div>
@@ -50,7 +52,7 @@
         </div>
       </header>
 
-      <div id="dashboardContainer" class="dashboard-group-container"></div>
+      <div id="dashboardContainer" class="dashboard-container"></div>
     </div>
 
     <div id="screenSaver"> 

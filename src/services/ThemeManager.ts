@@ -50,6 +50,7 @@ export class ThemeManager {
 				const hasExplicitTheme = localStorage.getItem( 'tiledash-theme' ) || 
 					new URLSearchParams( window.location.search ).get( 'theme' );
 				
+				// TODO append -dark or -light to theme string, every theme must have a light and dark variant
 				if ( !hasExplicitTheme ) {
 					this.setTheme( e.matches ? 'dark' : 'light' );
 				}
