@@ -24,5 +24,30 @@ module.exports = {
     'prefer-const': 'error',
     'no-var': 'error',
     'no-console': 'off',
+    'array-bracket-spacing'     : [
+			'error',
+			'always',
+		],
+    'comma-spacing' : 'error',
+    'comma-dangle' : [
+			'warn',
+			{
+				arrays    : 'always',
+				objects   : 'always',
+				imports   : 'ignore',
+				exports   : 'always',
+				functions : 'never',
+			},
+		],
+    indent         : [
+			'warn',
+			'tab',
+			{
+				SwitchCase       : 1,
+				MemberExpression : 1,
+				ArrayExpression  : 1,
+				ObjectExpression : 1,
+			},
+		],
   }
 };
