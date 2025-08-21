@@ -95,15 +95,22 @@ html, body {
 }
 
 body {
+    &.--nav-active {
+        // TODO add padding to main grid item
+        .dashboard-container {
+            padding-left: var(--nav-width) !important;
+        }
+    }
+
     &.portrait {
         .navigation {
-            left:50%;
-            bottom: 10px;
+            left:0;
+            right: 0;
+            bottom: 0;
             top: initial;
-            width: auto;
-            height: 50px;
+            width: 100%;
+            height: var(--nav-width, 50px);
             flex-direction: row;
-            transform: translateY(0) translateX(-50%);
 
              .page-button-container {
                 flex-direction: row;
@@ -111,17 +118,39 @@ body {
                 .page-button {
                     width: 50px;
                     height: 100%;
+
+                    &.--active {
+                        &::before {
+                            content: '';
+                            position: absolute;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            top: initial;
+                            width: initial;
+                            height: 4px;
+                        }
+                    }
                 }
              }
         }
+
+        .dashboard-main-grid {
+            margin-left: 0;
+        }
+
+        .dashboard-header {
+            padding-left: 0 !important;
+        }
+
+        .dashboard-container {
+            padding-left: var(--tile-margin) !important;
+        }
+
+
     }
 
-    &.--nav-active {
-        // TODO add padding to main grid item
-        .dashboard-container {
-            padding-left: var(--nav-width) !important;
-        }
-    }
+
 }
 
 .dashboard-header {
@@ -219,7 +248,7 @@ body {
 	background: var(--tile-background, #fff);
 	border: 1px solid var(--tile-border, transparent);
 	border-radius: var(--tile-radius, 12px);
-	box-shadow: var(--tile-shadow, 0 2px 8px rgba(0,0,0,0.1));
+	box-shadow: var(--tile-shadow);
 	cursor: pointer;
 	transition: all 0.2s ease;
 	text-align: center;
@@ -249,14 +278,14 @@ body {
 .tile__value {
 	font-size: 0.9rem;
 	font-weight: 600;
-	color: var(--tile-value-color, #007AFF);
+	color: var(--tile-value-color);
 }
 
 /* Tile states */
 .tile--on {
-	background: var(--tile-on-background, #007AFF);
+	background: var(--tile-on-background);
 	color: var(--tile-on-color, #fff);
-	border-color: var(--tile-on-border, #007AFF);
+	border-color: var(--tile-on-border);
 }
 
 .tile--on .tile__icon,

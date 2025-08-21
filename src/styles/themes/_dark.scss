@@ -15,7 +15,7 @@
 	--app-border-color: #333333;
 	--app-font-family: 'Helvetica Neue', Arial, sans-serif;
 	--app-line-height: 1.325;
-	--app-container-left-padding: 20px;
+	--app-container-left-padding: 10px;
 	/* Header */
 	--header-background: transparent;
 	--header-shadow: none; //0 1px 3px rgba(0, 0, 0, 0.3);
@@ -56,14 +56,14 @@
 	--group-title-line-height: 1.5;
 	
 	/* Tiles */
-	--tile-background: #2d2d2d;
-	--tile-border: #404040;
-	--tile-radius: 16px;
-	--tile-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-	--tile-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.3);
+	--tile-background: #2a3138;
+	--tile-border: #2a3138;
+	--tile-radius: 3px;
+	--tile-shadow: none; //0 4px 12px rgba(0, 0, 0, 0.2);
+	--tile-shadow-hover: none; //0 8px 24px rgba(0, 0, 0, 0.3);
 	--tile-icon-color: #a0a0a0;
 	--tile-text-color: #e8e8e8;
-	--tile-value-color: #4095ff;
+	--tile-value-color: #24ccb8;
 	
 	/* Tile states */
 	--tile-on-background: #27ae60;
