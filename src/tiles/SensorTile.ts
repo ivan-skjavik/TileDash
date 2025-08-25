@@ -1,5 +1,5 @@
 import { BaseTile } from './BaseTile';
-import { HomeyDevice, SensorTile as SensorTileConfig } from '../types';
+import { SensorTile as SensorTileConfig } from '../types';
 import { HomeyAPIV3LocalPatched } from 'homey-api';
 
 export class SensorTile extends BaseTile {
@@ -8,7 +8,7 @@ export class SensorTile extends BaseTile {
 
 	constructor(
 		tileId: string,
-		device: HomeyDevice | null,
+		protected device: any | null,
 		config: SensorTileConfig,
 		element: HTMLElement,
 		homeyApi: HomeyAPIV3LocalPatched

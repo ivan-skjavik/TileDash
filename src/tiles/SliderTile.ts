@@ -1,5 +1,5 @@
 import { BaseTile } from './BaseTile';
-import { HomeyDevice, SliderTile as SliderTileConfig } from '../types';
+import { SliderTile as SliderTileConfig } from '../types';
 import { HomeyAPIV3LocalPatched } from 'homey-api';
 
 export class SliderTile extends BaseTile {
@@ -9,7 +9,7 @@ export class SliderTile extends BaseTile {
 
 	constructor(
 		tileId: string,
-		device: HomeyDevice | null,
+		protected device: any | null,
 		config: SliderTileConfig,
 		element: HTMLElement,
 		homeyApi: HomeyAPIV3LocalPatched

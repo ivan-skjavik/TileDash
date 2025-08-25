@@ -1,8 +1,8 @@
-import { HomeyDevice, Tile } from '../types';
+import { Tile } from '../types';
 import { HomeyAPIV3LocalPatched } from 'homey-api';
 
 export abstract class BaseTile {
-	protected device: HomeyDevice | null;
+	protected device: any | null;
 	protected config: Tile;
 	protected element: HTMLElement;
 	protected homeyApi: HomeyAPIV3LocalPatched;
@@ -11,7 +11,7 @@ export abstract class BaseTile {
 
 	constructor(
 		tileId: string,
-		device: HomeyDevice | null,
+		device: any | null,
 		config: Tile,
 		element: HTMLElement,
 		homeyApi: HomeyAPIV3LocalPatched
@@ -173,7 +173,7 @@ protected showClickFeedback(): void {
 protected getCapabilityValue(): any {
 	const capabilityID = this.getCapabilityID();
 	if ( !this.device || !capabilityID ) return undefined;
-	const capability = this.device.capabilitiesObj[capabilityID];
+	const capability = ( this.device as any ).capabilitiesObj[capabilityID];
 	return capability ? capability.value : undefined;
 }
 

@@ -1,5 +1,5 @@
 import { BaseTile } from './BaseTile';
-import { HomeyDevice, SwitchTile as SwitchTileConfig } from '../types';
+import { SwitchTile as SwitchTileConfig } from '../types';
 import { HomeyAPIV3LocalPatched } from 'homey-api';
 
 export class SwitchTile extends BaseTile {
@@ -8,7 +8,7 @@ export class SwitchTile extends BaseTile {
 
 	constructor(
 		tileId: string,
-		device: HomeyDevice | null,
+		protected device: any | null,
 		config: SwitchTileConfig,
 		element: HTMLElement,
 		homeyApi: HomeyAPIV3LocalPatched

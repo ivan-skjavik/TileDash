@@ -1,5 +1,4 @@
 import { AthomCloudAPI, HomeyAPIV3Local } from 'homey-api';
-import { HomeyDevice } from '../types';
 import { TokenStorage } from './TokenStorage';
 import { URLManager } from '../utils';
 import { HomeyAPIV3LocalPatched } from 'homey-api';
@@ -12,6 +11,7 @@ export class HomeyClient {
 	private CLIENT_ID: string;
 	private CLIENT_SECRET: string;
 	private REDIRECT_URL: string;
+	public _devices = new Map<string, HomeyAPIV3Local.ManagerDevices.Device>();
 
 	constructor() {
 		// Load OAuth credentials from environment variables
@@ -27,6 +27,10 @@ export class HomeyClient {
 		}
 
 		console.log( '🔐 HomeyClient initialized with environment credentials' );
+	}
+
+	public get devices() {
+		return this._devices;
 	}
 
 	/**
@@ -158,7 +162,9 @@ export class HomeyClient {
       
 			// Log available properties to understand the API structure
 			console.log( '🔧 API properties:', Object.getOwnPropertyNames( this.homeyApi ).filter( prop => !prop.startsWith( '_' ) ) );
-      
+
+			await this.getDevices();
+
 			return true;
       
 		} catch ( error ) {
@@ -169,52 +175,62 @@ export class HomeyClient {
 		}
 	}
 
+
+	public getDeviceFromMap( deviceId: string ) {
+		return this._devices.get( deviceId ) || null;
+	}
+
+	// Fetch all devices for metadata (e.g., device names)
+	private async getDevices( ) {
+		try {
+			const api = this.getApi();
+
+			const devices = await api.devices.getDevices();
+
+			// insert all devices into this.devices 
+			for ( const [ deviceId, device, ] of Object.entries( devices ) ) {
+				this._devices.set( deviceId, device );
+			}
+
+		} catch ( error ) {
+			console.error( 'Error fetching devices:', error );
+			return {};
+		}
+	}
+
 	/**
     * Get the connected HomeyAPI instance
     * Throws an error if not connected to ensure type safety
     */
-	public getApi(): HomeyAPIV3LocalPatched {
+	public getApi() {
 		if ( !this.homeyApi || !this.isConnected ) {
 			throw new Error( 'HomeyClient is not connected. Call initializeAuth() first.' );
 		}
 		return this.homeyApi;
 	}
 
-	async getDevices(): Promise<HomeyDevice[]> {
-		const api = this.getApi();
-    
-		try {      
-			const devices = await api.devices.getDevices();
-			// Convert HomeyAPI Device objects to our HomeyDevice interface
-			return Object.values( devices ).map( device => this.convertToHomeyDevice( device ) );
-		} catch ( error ) {
-			console.error( 'Failed to get devices:', error );
-			throw error;
-		}
-	}
-
-	/**
-    * Convert a HomeyAPI Device to our HomeyDevice interface
-    */
-	private convertToHomeyDevice( device: any ): HomeyDevice {
-		return {
-			id: device.id,
-			name: device.name,
-			iconObj: device.iconObj,
-			ui: device.ui,
-			capabilitiesObj: device.capabilitiesObj || {},
-			capabilities: device.capabilities || [],
-			class: device.class,
-			energy: device.energy,
-			settings: device.settings,
-			store: device.store,
-			flags: device.flags,
-			driverUri: device.driverUri,
-			zone: device.zone,
-			driverId: device.driverId,
-			ownerName: device.ownerName,
-		};
-	}
+	// /**
+	// * Convert a HomeyAPI Device to our HomeyDevice interface
+	// */
+	// private convertToHomeyDevice( device: any ): HomeyDevice {
+	// 	return {
+	// 		id: device.id,
+	// 		name: device.name,
+	// 		iconObj: device.iconObj,
+	// 		ui: device.ui,
+	// 		capabilitiesObj: device.capabilitiesObj || {},
+	// 		capabilities: device.capabilities || [],
+	// 		class: device.class,
+	// 		energy: device.energy,
+	// 		settings: device.settings,
+	// 		store: device.store,
+	// 		flags: device.flags,
+	// 		driverUri: device.driverUri,
+	// 		zone: device.zone,
+	// 		driverId: device.driverId,
+	// 		ownerName: device.ownerName,
+	// 	};
+	// }
 
 	async getDevice( deviceId: string ): Promise<HomeyAPIV3Local.ManagerDevices.Device | null> {
 		const api = this.getApi();
@@ -224,25 +240,6 @@ export class HomeyClient {
 		} catch ( error ) {
 			console.error( `Failed to get device ${deviceId}:`, error );
 			return null;
-		}
-	}
-
-	/**
-    * Set capability value for a device using the direct HomeyAPI method
-    */
-	async setCapabilityValue( deviceId: string, capabilityId: string, value: any ): Promise<void> {
-		const api = this.getApi();
-    
-		try {
-			await api.devices.setCapabilityValue( {
-				deviceId: deviceId,
-				capabilityId: capabilityId,
-				value: value,
-			} );
-			console.log( `✅ Set capability value: ${deviceId}:${capabilityId} = ${value}` );
-		} catch ( error ) {
-			console.error( `❌ Failed to set capability value: ${deviceId}:${capabilityId} = ${value}`, error );
-			throw error;
 		}
 	}
 
@@ -265,64 +262,6 @@ export class HomeyClient {
 				console.error( `❌ Failed to trigger flow or advanced flow: ${flowId}`, { flowError, advancedFlowError, } );
 				throw advancedFlowError;
 			}
-		}
-	}
-
-	onDeviceUpdate( _callback: ( device: HomeyDevice ) => void ): void {
-		this.getApi(); // Ensure we're connected
-    
-		// Device updates are typically handled through capability listeners
-		// This is a placeholder for system-level device update events
-		console.log( '---------🔄 Device update listener registered (placeholder)' );
-	}
-
-	onDeviceCreate( _callback: ( device: HomeyDevice ) => void ): void {
-		this.getApi(); // Ensure we're connected
-    
-		console.log( '---------🔄 Device create listener registered (placeholder)' );
-	}
-
-	onDeviceDelete( _callback: ( device: HomeyDevice ) => void ): void {
-		this.getApi(); // Ensure we're connected
-    
-		console.log( '---------🔄 Device delete listener registered (placeholder)' );
-	}
-
-	/**
-   * Add a listener for device capability changes
-   */
-	async addDeviceListener( deviceId: string, capabilityId: string, callback: ( newValue: any, oldValue: any ) => void ): Promise<void> {
-		const api = this.getApi();
-    
-		try {
-			const device = await api.devices.getDevice( { id: deviceId, } );
-			// The makeCapabilityInstance callback only receives the new value
-			device.makeCapabilityInstance( capabilityId, ( newValue: any ) => {
-				// We don't have access to the old value in this API, so pass undefined
-				console.log( 'callbackz' );
-                
-				callback( newValue, undefined );
-			} );
-			console.log( `✅ Added listener for ${deviceId}:${capabilityId}` );
-		} catch ( error ) {
-			console.error( `❌ Failed to add device listener: ${deviceId}:${capabilityId}`, error );
-			throw error;
-		}
-	}
-
-	/**
-   * Remove a listener for device capability changes
-   */
-	async removeDeviceListener( deviceId: string, capabilityId: string, _callback: ( newValue: any, oldValue: any ) => void ): Promise<void> {
-		this.getApi(); // Ensure we're connected
-    
-		try {
-			// The homey API doesn't seem to have a direct way to remove specific capability listeners
-			// This would need to be handled differently, perhaps by maintaining a registry
-			console.log( `🔄 Remove listener for ${deviceId}:${capabilityId} (method not fully implemented)` );
-		} catch ( error ) {
-			console.error( `❌ Failed to remove device listener: ${deviceId}:${capabilityId}`, error );
-			throw error;
 		}
 	}
 }

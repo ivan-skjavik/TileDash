@@ -5,6 +5,7 @@ import { SwitchTile } from '../tiles/SwitchTile';
 import { SensorTile } from '../tiles/SensorTile';
 import { ButtonTile } from '../tiles/ButtonTile';
 import { HomeyClient } from '../services/HomeyClient';
+import { HomeyAPIV3Local } from 'homey-api';
 
 export class TileRenderer {
 	private container: HTMLElement | null;
@@ -12,7 +13,6 @@ export class TileRenderer {
 	private tiles: Map<string, BaseTile> = new Map();
 	private currentPageIndex: number = 0;
 	private pages: DashboardPage[] = [];
-	private deviceMap: Map<string, HomeyDevice> = new Map();
 	private config: AppConfig;
 
 	constructor( containerId: string, homeyClient: HomeyClient, config: AppConfig ) {
@@ -59,7 +59,7 @@ export class TileRenderer {
 	private createTileInstance(
 		tileId: string,
 		type: string,
-		device: HomeyDevice | null,
+		device: HomeyAPIV3Local.ManagerDevices.Device | null,
 		config: Tile,
 		element: HTMLElement
 	): BaseTile | null {
@@ -92,7 +92,7 @@ export class TileRenderer {
 	public createTile(
 		tileId: string,
 		type: string,
-		device: HomeyDevice | null,
+		device: HomeyAPIV3Local.ManagerDevices.Device | null,
 		config: Tile,
 		position: [number, number],
 		width: number,
@@ -232,9 +232,8 @@ export class TileRenderer {
 	public renderDashboard(
 		pages: DashboardPage[],
 		_settings: any,
-		devices: HomeyDevice[]
 	): void {
-		console.log( '🎨 Rendering dashboard with', pages.length, 'pages and', devices.length, 'devices' );
+		console.log( '🎨 Rendering dashboard with', pages.length, 'pages and', this.homeyClient.devices.size, 'devices' );
     
 		if ( !this.container ) {
 			console.error( 'Container not available for dashboard rendering' );
@@ -247,12 +246,6 @@ export class TileRenderer {
     
 		// Clear existing content
 		this.clearAllTiles();
-    
-		// Convert devices array to map for efficient lookup
-		this.deviceMap.clear();
-		devices.forEach( device => {
-			this.deviceMap.set( device.id, device );
-		} );
 
 		// Set up the main dashboard container
 		this.container.innerHTML = '';
@@ -264,7 +257,7 @@ export class TileRenderer {
 
 		// Render all pages (hidden except first one)
 		pages.forEach( ( page, pageIndex ) => {
-			this.renderPage( page, this.deviceMap, pageIndex );
+			this.renderPage( page, this.homeyClient.devices, pageIndex );
 		} );
 
 		console.log( `🎨 Dashboard rendered with ${this.tiles.size} total tiles` );
@@ -275,7 +268,7 @@ export class TileRenderer {
    */
 	public renderPage(
 		page: DashboardPage,
-		devices: Map<string, HomeyDevice>,
+		devices: Map<string, HomeyAPIV3Local.ManagerDevices.Device>,
 		pageIndex: number = 0
 	): void {
 		if ( !this.container ) {
@@ -427,6 +420,8 @@ export class TileRenderer {
    */
 	private navigateToPage( targetPageIndex: number ): void {
 		console.log( `🧭 Navigating to page ${targetPageIndex}` );
+
+		// TODO call homey refresh api to clear all listeners....
 
 		// Update active button
 		const allPageButtons = document.querySelectorAll( '.page-button' );

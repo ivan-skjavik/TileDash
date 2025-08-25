@@ -1,5 +1,5 @@
 import { AppConfig, DashboardConfig } from './types';
-import { DashboardUtils, URLManager, DeviceStateManager } from './utils';
+import { DashboardUtils, URLManager } from './utils';
 import { appConfig } from '../config';
 import { TileRenderer } from './renderers/TileRenderer';
 import HomeyClient from './services/HomeyClient';
@@ -144,10 +144,10 @@ class TileDashApp {
 
 		// Render dashboard with tiles
 		if ( this.tileRenderer ) {
-			const devices = await this.homeyClient?.getDevices();
+			const devices = this.homeyClient?.devices;
 
 			if ( !devices ) {
-				console.error( '⛔ Failed to retrieve devices from Homey, aborting' );
+				console.error( '⛔ Failed to retrieve devices from HomeyClient, aborting' );
 				return;
 			}
 
@@ -158,9 +158,8 @@ class TileDashApp {
 			}
 
 			console.log( `TileDashApp: Rendering dashboard '${selectedDashboard.title || selectedDashboard.id}'` );
-			this.tileRenderer.renderDashboard( selectedDashboard.pages, this.config.settings, devices );
-		}		// Initialize device state management
-		this.initializeDeviceStateManagement();
+			this.tileRenderer.renderDashboard( selectedDashboard.pages, this.config.settings );
+		}		
 
 		console.log( 'Dashboard configuration loaded:', this.config );
 	}
@@ -240,61 +239,6 @@ class TileDashApp {
 
 		// Theme URL override is now handled by ThemeManager constructor
 		// through URL parameters, so no need to handle it here
-	}
-
-	private initializeDeviceStateManagement(): void {
-		if ( !this.homeyClient ) {
-			throw new Error( 'HomeyClient is not initialized' );
-		}
-		console.log( 'initializeDeviceStateManagement' );
-    
-		// Set up device state change listeners
-		if ( typeof window.addEventListener === 'function' ) {
-			window.addEventListener( 'deviceStateChange', ( ( event: CustomEvent ) => {
-				console.log( 'Device state changed:', event.detail );
-        
-				const { deviceId, capabilityId, value, oldValue, } = event.detail;
-				DeviceStateManager.setState( deviceId, capabilityId, value );
-        
-				// Log device changes to database if available
-				this.logDeviceChange( deviceId, capabilityId, value, oldValue );
-			} ) as EventListener );
-		}
-
-		// Set up Homey device event listeners if connected
-		if ( this.homeyClient.isConnected ) {
-			this.homeyClient.onDeviceUpdate( ( device ) => {
-				console.log( 'Device updated:', device.name );
-				// Update the tile renderer with new device data
-				if ( this.tileRenderer ) {
-					this.tileRenderer.updateDevices( [ device, ] );
-				}
-			} );
-		}
-	}
-
-	private async logDeviceChange( deviceId: string, capabilityId: string, value: any, oldValue: any ): Promise<void> {
-		try {
-			const response = await fetch( '/api/device-changes', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify( {
-					deviceId,
-					capabilityId,
-					value,
-					oldValue,
-					timestamp: Date.now(),
-				} ),
-			} );
-      
-			if ( !response.ok ) {
-				console.warn( 'Failed to log device change to database' );
-			}
-		} catch ( error ) {
-			console.warn( 'Error logging device change:', error );
-		}
 	}
 }
 

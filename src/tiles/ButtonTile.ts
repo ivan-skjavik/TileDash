@@ -1,5 +1,5 @@
 import { BaseTile } from './BaseTile';
-import { HomeyDevice, ButtonTile as ButtonTileConfig } from '../types';
+import { ButtonTile as ButtonTileConfig } from '../types';
 import { HomeyAPIV3LocalPatched } from 'homey-api';
 
 export class ButtonTile extends BaseTile {
@@ -8,7 +8,7 @@ export class ButtonTile extends BaseTile {
 
 	constructor(
 		tileId: string,
-		device: HomeyDevice | null,
+		device: any | null,
 		config: ButtonTileConfig,
 		element: HTMLElement,
 		homeyApi: HomeyAPIV3LocalPatched
