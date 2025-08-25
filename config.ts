@@ -61,8 +61,9 @@ export const appConfig: AppConfig = {
 							height: 8,
 							name: "Kontor Appliances",
 							devices: [
-								{ deviceId: '56b58d98-3604-42e7-9945-8575d88fd8f3', capabilityId: 'dim', alias: 'taklys_kontor', /* title, icon, minValue, maxValue (default 0/1), step(default) */},
+								{ deviceId: '56b58d98-3604-42e7-9945-8575d88fd8f3', capabilityId: 'onoff', alias: 'taklys_kontor', /* title, icon, minValue, maxValue (default 0/1), step(default) */},
 								{ deviceId: '15575f05-1d5c-4c37-95d6-2fce7f4712b1', capabilityId: 'onoff', alias: 'taklys_loft', /* title, icon, minValue, maxValue (default 0/1), step(default) */},
+								{ deviceId: '15575f05-1d5c-4c37-95d6-2fce7f4712b1', capabilityId: 'dim', alias: 'taklys_loft', /* title, icon, minValue, maxValue (default 0/1), step(default) */},
 								{ deviceId: '56b58d98-3604-42e7-9945-8575d88fd8f3', capabilityId: 'dim', alias: 'taklys_kontor_dim', },
 								{ deviceId: '20dcccf8-3734-4a67-994b-1f6171af177c', capabilityId: 'dim', alias: 'taklys_bad', },
 							],

@@ -10,8 +10,6 @@ import {
 	updateMaterialSlider,
 	updateControlItemState,
 	debounce,
-	type MaterialToggleOptions,
-	type MaterialSliderOptions,
 	type ControlItemOptions,
 } from '../utils/MaterialControls.js';
 
@@ -47,7 +45,11 @@ export class AppliancesTile extends BaseTile {
 		
 		this.initializeApplianceDevices();
 		this.createDeviceControls();
-		// this.render();
+		
+		// Setup event listeners for external updates
+		this.setupEventListeners().catch( error => {
+			console.error( `Failed to setup event listeners for AppliancesTile ${this.tileId}:`, error );
+		} );
 	}
 
 	private createControlsContainer(): HTMLElement {
@@ -85,24 +87,30 @@ export class AppliancesTile extends BaseTile {
 		}
 
 		// Sort devices by name for consistent ordering
-		this.nonDimmableDevices.sort( ( a, b ) => a.device.name.localeCompare( b.device.name ) );
-		this.dimmableDevices.sort( ( a, b ) => a.device.name.localeCompare( b.device.name ) );
+		// this.nonDimmableDevices.sort( ( a, b ) => a.device.name.localeCompare( b.device.name ) );
+		// this.dimmableDevices.sort( ( a, b ) => a.device.name.localeCompare( b.device.name ) );
 	}
 
 	private createDeviceControls(): void {
 		// Create controls for non-dimmable devices (left column)
 		this.nonDimmableDevices.forEach( appliance => {
 			const controlElement = this.createToggleControl( appliance );
-			this.controlElements.set( `${appliance.id}-onoff`, controlElement );
+			const controlKey = `${appliance.id}-onoff`;
+			this.controlElements.set( controlKey, controlElement );
 			this.leftColumn.appendChild( controlElement );
+			console.log( `📝 Created toggle control for ${appliance.device.name} with key: ${controlKey}` );
 		} );
 
 		// Create controls for dimmable devices (right column)
 		this.dimmableDevices.forEach( appliance => {
 			const controlElement = this.createDimmerControl( appliance );
-			this.controlElements.set( `${appliance.id}-dim`, controlElement );
+			const controlKey = `${appliance.id}-dim`;
+			this.controlElements.set( controlKey, controlElement );
 			this.rightColumn.appendChild( controlElement );
+			console.log( `📝 Created dimmer control for ${appliance.device.name} with key: ${controlKey}` );
 		} );
+
+		console.log( `📋 Total control elements created: ${this.controlElements.size}` );
 	}
 
 	private createToggleControl( appliance: ApplianceDevice ): HTMLElement {
@@ -111,15 +119,13 @@ export class AppliancesTile extends BaseTile {
 		const isOn = device.capabilitiesObj?.onoff?.value ?? false;
 
 		// Create toggle switch
-		const toggleOptions: MaterialToggleOptions = {
+		const toggle = createMaterialToggle( {
 			id: `toggle-${id}`,
 			checked: isOn,
 			disabled: !isOnline,
 			onChange: ( checked ) => this.debouncedToggleUpdate( id, checked ),
 			ariaLabel: `Toggle ${device.name}`,
-		};
-
-		const toggle = createMaterialToggle( toggleOptions );
+		} );
 		
 		// Create status indicator
 		const statusIndicator = createStatusIndicator( isOnline );
@@ -131,14 +137,12 @@ export class AppliancesTile extends BaseTile {
 		controlInfo.appendChild( toggle );
 		controlInfo.appendChild( statusIndicator );
 
-		const controlOptions: ControlItemOptions = {
+		return createControlItem( {
 			title: device.name,
 			subtitle: this.getDeviceSubtitle( device ),
 			control: controlInfo,
 			state: isOnline ? ( isOn ? 'active' : undefined ) : 'unavailable',
-		};
-
-		return createControlItem( controlOptions );
+		} );
 	}
 
 	private createDimmerControl( appliance: ApplianceDevice ): HTMLElement {
@@ -151,7 +155,7 @@ export class AppliancesTile extends BaseTile {
 		const sliderValue = Math.round( dimValue * 100 );
 
 		// Create dimmer slider
-		const sliderOptions: MaterialSliderOptions = {
+		const slider = createMaterialSlider( {
 			id: `slider-${id}`,
 			value: sliderValue,
 			min: 0,
@@ -162,9 +166,7 @@ export class AppliancesTile extends BaseTile {
 			showValue: true,
 			unit: '%',
 			ariaLabel: `Adjust brightness for ${device.name}`,
-		};
-
-		const slider = createMaterialSlider( sliderOptions );
+		} );
 		
 		// Create status indicator
 		const statusIndicator = createStatusIndicator( isOnline );
@@ -306,6 +308,8 @@ export class AppliancesTile extends BaseTile {
 	public update( newValue: any, capabilityId: string, deviceId?: string ): void {
 		if ( !deviceId ) return;
 
+		console.log( `🔄 AppliancesTile update: ${deviceId}:${capabilityId} = ${newValue}` );
+
 		// Update device state in our maps
 		const device = this.deviceMap.get( deviceId );
 		if ( device && device.capabilitiesObj && device.capabilitiesObj[capabilityId] ) {
@@ -321,18 +325,26 @@ export class AppliancesTile extends BaseTile {
 	}
 
 	private updateToggleUI( deviceId: string, value: boolean ): void {
-		const controlElement = this.controlElements.get( `${deviceId}-onoff` );
+		const controlKey = `${deviceId}-onoff`;
+		const controlElement = this.controlElements.get( controlKey );
+		console.log( `🔄 updateToggleUI: ${deviceId} = ${value}, controlKey: ${controlKey}, found: ${!!controlElement}` );
+		
 		if ( controlElement ) {
 			const toggle = controlElement.querySelector( '.material-toggle' ) as HTMLElement;
 			if ( toggle ) {
 				updateMaterialToggle( toggle, value );
 			}
 			updateControlItemState( controlElement, value ? 'active' : undefined );
+		} else {
+			console.warn( `Control element not found for key: ${controlKey}` );
 		}
 	}
 
 	private updateSliderUI( deviceId: string, value: number ): void {
-		const controlElement = this.controlElements.get( `${deviceId}-dim` );
+		const controlKey = `${deviceId}-dim`;
+		const controlElement = this.controlElements.get( controlKey );
+		console.log( `🔄 updateSliderUI: ${deviceId} = ${value}, controlKey: ${controlKey}, found: ${!!controlElement}` );
+		
 		if ( controlElement ) {
 			const slider = controlElement.querySelector( '.material-slider' ) as HTMLElement;
 			if ( slider ) {
@@ -342,6 +354,8 @@ export class AppliancesTile extends BaseTile {
 			const device = this.deviceMap.get( deviceId );
 			const isOn = device?.capabilitiesObj?.onoff?.value ?? false;
 			updateControlItemState( controlElement, isOn && value > 0 ? 'active' : undefined );
+		} else {
+			console.warn( `Control element not found for key: ${controlKey}` );
 		}
 	}
 
