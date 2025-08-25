@@ -331,3 +331,9 @@ body {
 #screenSaver {
     display: none;
 }
+
+/* Import Material Controls */
+@import './components/controls';
+
+/* Import Appliances Tile */
+@import './components/appliances-tile';

@@ -1,11 +1,11 @@
-import { Tile, DashboardPage, HomeyDevice, SliderTile as SliderTileConfig, SwitchTile as SwitchTileConfig, SensorTile as SensorTileConfig, ButtonTile as ButtonTileConfig, AppConfig } from '../types';
+import { Tile, DashboardPage, HomeyDevice, SliderTile as SliderTileConfig, SwitchTile as SwitchTileConfig, SensorTile as SensorTileConfig, ButtonTile as ButtonTileConfig, AppliancesTile as AppliancesTileConfig, AppConfig, getTileDeviceIds } from '../types';
 import { BaseTile } from '../tiles/BaseTile';
 import { SliderTile } from '../tiles/SliderTile';
 import { SwitchTile } from '../tiles/SwitchTile';
 import { SensorTile } from '../tiles/SensorTile';
 import { ButtonTile } from '../tiles/ButtonTile';
 import { HomeyClient } from '../services/HomeyClient';
-import { HomeyAPIV3Local } from 'homey-api';
+import { AppliancesTile } from '@/tiles/AppliancesTile';
 
 export class TileRenderer {
 	private container: HTMLElement | null;
@@ -13,14 +13,14 @@ export class TileRenderer {
 	private tiles: Map<string, BaseTile> = new Map();
 	private currentPageIndex: number = 0;
 	private pages: DashboardPage[] = [];
-	private config: AppConfig;
+	private _config: AppConfig; // Stored for future use
 
 	constructor( containerId: string, homeyClient: HomeyClient, config: AppConfig ) {
 		console.log( 'TileRenderer: Constructor called with containerId:', containerId );
 
 		this.container = document.getElementById( containerId );
 		this.homeyClient = homeyClient;
-		this.config = config;
+		this._config = config;
 
 		if ( !this.container ) {
 			console.error( `TileRenderer: Container with id '${containerId}' not found!` );
@@ -59,23 +59,40 @@ export class TileRenderer {
 	private createTileInstance(
 		tileId: string,
 		type: string,
-		device: HomeyAPIV3Local.ManagerDevices.Device | null,
 		config: Tile,
 		element: HTMLElement
 	): BaseTile | null {
 		try {
 			const homeyApi = this.homeyClient.getApi();
+			
+			// Get required device IDs from config
+			const requiredDeviceIds = getTileDeviceIds( config );
+			
+			// Look up devices in HomeyClient's device register
+			const devices: HomeyDevice[] = [];
+			requiredDeviceIds.forEach( deviceId => {
+				const device = this.homeyClient.devices.get( deviceId );
+				if ( device ) {
+					devices.push( device );
+				} else {
+					console.warn( `Device ${deviceId} not found in HomeyClient device register for tile ${tileId}` );
+				}
+			} );
+			
+			console.log( `🔧 Creating ${type} tile with ${devices.length} devices:`, requiredDeviceIds );
       
 			switch ( type.toUpperCase() ) {
 				case 'SLIDER':
-					return new SliderTile( tileId, device, config as SliderTileConfig, element, homeyApi );
+					return new SliderTile( tileId, devices, config as SliderTileConfig, element, homeyApi );
 				case 'SWITCH':
-					return new SwitchTile( tileId, device, config as SwitchTileConfig, element, homeyApi );
+					return new SwitchTile( tileId, devices, config as SwitchTileConfig, element, homeyApi );
 				case 'SENSOR':
 				case 'BINARY_SENSOR':
-					return new SensorTile( tileId, device, config as SensorTileConfig, element, homeyApi );
+					return new SensorTile( tileId, devices, config as SensorTileConfig, element, homeyApi );
 				case 'BUTTON':
-					return new ButtonTile( tileId, device, config as ButtonTileConfig, element, homeyApi );
+					return new ButtonTile( tileId, devices, config as ButtonTileConfig, element, homeyApi );
+				case 'APPLIANCES':
+					return new AppliancesTile( tileId, devices, config as AppliancesTileConfig, element, homeyApi );
 				default:
 					console.warn( `Unknown tile type: ${type}` );
 					return null;
@@ -92,7 +109,6 @@ export class TileRenderer {
 	public createTile(
 		tileId: string,
 		type: string,
-		device: HomeyAPIV3Local.ManagerDevices.Device | null,
 		config: Tile,
 		position: [number, number],
 		width: number,
@@ -120,8 +136,8 @@ export class TileRenderer {
 		tileElement.style.gridRowStart = `${position[1] + 1}`;
 		tileElement.style.gridRowEnd = `${position[1] + 1 + height}`;
 
-		// Create tile instance
-		const tileInstance = this.createTileInstance( tileId, type, device, config, tileElement );
+		// Create tile instance (devices are looked up from config internally)
+		const tileInstance = this.createTileInstance( tileId, type, config, tileElement );
     
 		if ( !tileInstance ) {
 			console.error( `Failed to create tile instance for type: ${type}` );
@@ -154,7 +170,7 @@ export class TileRenderer {
 	public removeTile( tileId: string ): void {
 		const tile = this.tiles.get( tileId );
 		if ( tile ) {
-			tile.destroy();
+			// tile.destroy();
 			this.tiles.delete( tileId );
 			console.log( `🗑️ Removed tile: ${tileId}` );
 		}
@@ -164,8 +180,8 @@ export class TileRenderer {
    * Clear all tiles
    */
 	public clearAllTiles(): void {
-		this.tiles.forEach( ( tile ) => {
-			tile.destroy();
+		this.tiles.forEach( ( _tile ) => {
+			// tile.destroy();
 		} );
 		this.tiles.clear();
     
@@ -183,8 +199,10 @@ export class TileRenderer {
 		let updatedCount = 0;
     
 		this.tiles.forEach( ( tile ) => {
-			if ( ( tile as any ).device?.id === deviceId ) {
-				tile.update( newValue, capability );
+			// Check if this tile uses the device (using new multi-device architecture)
+			const deviceIds = tile.getDeviceIds();
+			if ( deviceIds.includes( deviceId ) ) {
+				tile.update( newValue, capability, deviceId );
 				updatedCount++;
 			}
 		} );
@@ -201,7 +219,9 @@ export class TileRenderer {
 		const deviceTiles: BaseTile[] = [];
     
 		this.tiles.forEach( ( tile ) => {
-			if ( ( tile as any ).device?.id === deviceId ) {
+			// Check if this tile uses the device (using new multi-device architecture)
+			const deviceIds = tile.getDeviceIds();
+			if ( deviceIds.includes( deviceId ) ) {
 				deviceTiles.push( tile );
 			}
 		} );
@@ -231,7 +251,7 @@ export class TileRenderer {
    */
 	public renderDashboard(
 		pages: DashboardPage[],
-		_settings: any,
+		_settings: any
 	): void {
 		console.log( '🎨 Rendering dashboard with', pages.length, 'pages and', this.homeyClient.devices.size, 'devices' );
     
@@ -268,7 +288,7 @@ export class TileRenderer {
    */
 	public renderPage(
 		page: DashboardPage,
-		devices: Map<string, HomeyAPIV3Local.ManagerDevices.Device>,
+		_devices: Map<string, HomeyDevice>,
 		pageIndex: number = 0
 	): void {
 		if ( !this.container ) {
@@ -288,14 +308,11 @@ export class TileRenderer {
 
 		// Render tiles in this page
 		page.tiles.forEach( ( item, itemIndex ) => {
-			const deviceId = ( item as any ).id;
-			const device = deviceId ? devices.get( deviceId ) : null;
 			const tileId = `page-${pageIndex}-tile-${itemIndex}`;
       
 			this.createTile(
 				tileId,
 				item.type,
-				device || null,
 				item,
 				item.position,
 				item.width,

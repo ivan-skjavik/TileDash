@@ -25,6 +25,8 @@ export interface HomeyDevice {
   zone?: string;
   driverId?: string;
   ownerName?: string;
+  makeCapabilityInstance: ( capabilityID: string, callback: ( newValue: any ) => void ) => void;
+  setCapabilityValue: ( capabilityID: string, value: any ) => Promise<void>;
 }
 
 export interface HomeyCapability {
@@ -120,15 +122,35 @@ export interface BaseTileData {
   icon?: string;
 }
 
+// Device-capability mapping for multi-device support
+export interface DeviceCapabilityMapping {
+  /** Device ID */
+  deviceId: string;
+
+  /** Single capability ID */
+  capabilityId?: string;
+
+  /** Multiple capability IDs for the same device */
+  capabilityIds?: string[];
+
+  /** Optional alias for this device in the tile context */
+  alias?: string;
+
+  /** Optional device-specific configuration */
+  config?: Record<string, any>;
+}
+
 // Device-based tiles extend BaseTileData with device properties
 export interface DeviceTileData extends BaseTileData {
-  /** Unique identifier for the device.
-   *  Check Homey developer tool for device ID (https://tools.developer.homey.app/tools/devices) */
-  id: string;
+  /** Single device configuration (backward compatible) */
+  id?: string;
+  capabilityID?: string;
 
-  /** Capability to monitor/control.
-   *  Check Homey developer tool for available capabilities (https://tools.developer.homey.app/tools/devices) */
-  capabilityID: string;
+  /** Multi-device configuration */
+  devices?: DeviceCapabilityMapping[];
+
+  /** Control mode for multi-device tiles */
+  multiDeviceMode?: 'synchronized' | 'individual' | 'aggregated';
 }
 
 export interface VirtualTile extends BaseTileData {
@@ -156,10 +178,8 @@ export interface BinarySensorTile extends DeviceTileData {
   effectOff?: string;
 }
 
-export interface ButtonTile extends BaseTileData {
+export interface ButtonTile extends DeviceTileData {
   type: 'BUTTON';
-  id: string;
-  capabilityID?: string;
   flowID?: string;
   buttonValue?: any;
   icons?: {
@@ -305,6 +325,26 @@ export interface DoorbirdPopupTile extends DeviceTileData {
   testPopup?: boolean;
 }
 
+export interface AppliancesTile extends DeviceTileData {
+  type: 'APPLIANCES';
+  /** Maximum number of rows to display (1 or 2) */
+  maxRows?: 1 | 2;
+  /** Show device names below icons */
+  showNames?: boolean;
+  /** Icon size for appliance items */
+  iconSize?: number;
+  /** Spacing between appliance items */
+  itemSpacing?: number;
+  /** Custom icons for specific device types */
+  customIcons?: {
+    [deviceId: string]: {
+      on?: string;
+      off?: string;
+      dimming?: string;
+    };
+  };
+}
+
 export type Tile = 
   | VirtualTile 
   | SwitchTile 
@@ -319,7 +359,8 @@ export type Tile =
   | ThermostatTile 
   | MediaTile 
   | GaugeTile 
-  | DoorbirdPopupTile;
+  | DoorbirdPopupTile
+  | AppliancesTile;
 
 // Type utilities for tile discrimination and inference
 export type TileType = Tile['type'];
@@ -356,7 +397,7 @@ export function createTileConfig<T extends TileType>(
  * Check if tile is a device-based tile (has id and capabilityID)
  */
 export function isDeviceTile( tile: Tile ): tile is Tile & DeviceTileData {
-	return 'id' in tile && 'capabilityID' in tile;
+	return 'id' in tile || 'devices' in tile;
 }
 
 /**
@@ -364,6 +405,76 @@ export function isDeviceTile( tile: Tile ): tile is Tile & DeviceTileData {
  */
 export function isVirtualTile( tile: Tile ): tile is VirtualTile | ImageTile {
 	return tile.type === 'VIRTUAL' || tile.type === 'IMAGE';
+}
+
+/**
+ * Check if tile uses multi-device configuration
+ */
+export function isMultiDeviceTile( tile: Tile ): tile is Tile & { devices: DeviceCapabilityMapping[] } {
+	return 'devices' in tile && Array.isArray( tile.devices ) && tile.devices.length > 0;
+}
+
+/**
+ * Check if tile uses single device configuration (legacy)
+ */
+export function isSingleDeviceTile( tile: Tile ): tile is Tile & { id: string; capabilityID: string } {
+	return 'id' in tile && 'capabilityID' in tile && typeof tile.id === 'string';
+}
+
+/**
+ * Get all device IDs from a tile configuration
+ */
+export function getTileDeviceIds( tile: Tile ): string[] {
+	const deviceIds: string[] = [];
+	
+	// Legacy single device
+	if ( isSingleDeviceTile( tile ) ) {
+		deviceIds.push( tile.id );
+	}
+	
+	// Multi-device configuration
+	if ( isMultiDeviceTile( tile ) ) {
+		tile.devices.forEach( device => deviceIds.push( device.deviceId ) );
+	}
+	
+	return deviceIds;
+}
+
+/**
+ * Get all device-capability combinations from a tile
+ */
+export function getTileDeviceCapabilities( tile: Tile ): Array<{ deviceId: string; capabilityId: string; alias?: string }> {
+	const combinations: Array<{ deviceId: string; capabilityId: string; alias?: string }> = [];
+	
+	// Legacy single device
+	if ( isSingleDeviceTile( tile ) ) {
+		combinations.push( { deviceId: tile.id, capabilityId: tile.capabilityID, } );
+	}
+	
+	// Multi-device configuration
+	if ( isMultiDeviceTile( tile ) ) {
+		tile.devices.forEach( device => {
+			if ( device.capabilityId ) {
+				combinations.push( { 
+					deviceId: device.deviceId, 
+					capabilityId: device.capabilityId,
+					alias: device.alias,
+				} );
+			}
+			
+			if ( device.capabilityIds ) {
+				device.capabilityIds.forEach( capabilityId => {
+					combinations.push( { 
+						deviceId: device.deviceId, 
+						capabilityId,
+						alias: device.alias,
+					} );
+				} );
+			}
+		} );
+	}
+	
+	return combinations;
 }
 
 export interface Flow {

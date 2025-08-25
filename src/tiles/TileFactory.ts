@@ -1,10 +1,11 @@
-import { HomeyDevice, Tile, TileType, TileConfigByType, createTileConfig, isTileOfType } from '../types';
+import { HomeyDevice, Tile, TileType, TileConfigByType, createTileConfig, isTileOfType, getTileDeviceIds } from '../types';
 import { HomeyAPIV3LocalPatched } from 'homey-api';
 import { BaseTile } from './BaseTile';
 import { SliderTile } from './SliderTile';
 import { SwitchTile } from './SwitchTile';
 import { SensorTile } from './SensorTile';
 import { ButtonTile } from './ButtonTile';
+import { AppliancesTile } from './AppliancesTile';
 
 /**
  * Type-safe tile factory with automatic type inference
@@ -17,29 +18,34 @@ export class TileFactory {
 	static createTile(
 		tileId: string,
 		config: Tile,
-		device: HomeyDevice | null,
+		devices: HomeyDevice[], // Now accepts array of devices for multi-device support
 		element: HTMLElement,
 		homeyApi: HomeyAPIV3LocalPatched
 	): BaseTile {
 		// Type guards automatically narrow the config type
 		if ( isTileOfType( config, 'SLIDER' ) ) {
 			// config is now SliderTile - TypeScript knows all properties
-			return new SliderTile( tileId, device, config, element, homeyApi );
+			return new SliderTile( tileId, devices, config, element, homeyApi );
 		}
 		
 		if ( isTileOfType( config, 'SWITCH' ) ) {
 			// config is now SwitchTile
-			return new SwitchTile( tileId, device, config, element, homeyApi );
+			return new SwitchTile( tileId, devices, config, element, homeyApi );
 		}
 		
 		if ( isTileOfType( config, 'SENSOR' ) ) {
 			// config is now SensorTile
-			return new SensorTile( tileId, device, config, element, homeyApi );
+			return new SensorTile( tileId, devices, config, element, homeyApi );
 		}
 		
 		if ( isTileOfType( config, 'BUTTON' ) ) {
 			// config is now ButtonTile
-			return new ButtonTile( tileId, device, config, element, homeyApi );
+			return new ButtonTile( tileId, devices, config, element, homeyApi );
+		}
+		
+		if ( isTileOfType( config, 'APPLIANCES' ) ) {
+			// config is now AppliancesTile
+			return new AppliancesTile( tileId, devices, config, element, homeyApi );
 		}
 		
 		// Add more tile types here...
@@ -82,8 +88,12 @@ export class TileFactory {
 			if ( config.step <= 0 ) {
 				errors.push( 'Slider step must be positive' );
 			}
-			if ( !config.id || !config.capabilityID ) {
-				errors.push( 'Slider tiles require device id and capabilityID' );
+			// Check for device configuration (legacy or new)
+			if ( !config.id && !config.devices ) {
+				errors.push( 'Slider tiles require device configuration (id or devices)' );
+			}
+			if ( !config.capabilityID && !config.devices ) {
+				errors.push( 'Slider tiles require capability configuration (capabilityID or devices)' );
 			}
 			if ( ![ 'horizontal', 'vertical', ].includes( config.orientation ) ) {
 				errors.push( 'Slider orientation must be horizontal or vertical' );
@@ -92,15 +102,21 @@ export class TileFactory {
 		
 		if ( isTileOfType( config, 'SWITCH' ) ) {
 			// TypeScript knows this is SwitchTile
-			if ( !config.id || !config.capabilityID ) {
-				errors.push( 'Switch tiles require device id and capabilityID' );
+			if ( !config.id && !config.devices ) {
+				errors.push( 'Switch tiles require device configuration (id or devices)' );
+			}
+			if ( !config.capabilityID && !config.devices ) {
+				errors.push( 'Switch tiles require capability configuration (capabilityID or devices)' );
 			}
 		}
 		
 		if ( isTileOfType( config, 'SENSOR' ) ) {
 			// TypeScript knows this is SensorTile
-			if ( !config.id || !config.capabilityID ) {
-				errors.push( 'Sensor tiles require device id and capabilityID' );
+			if ( !config.id && !config.devices ) {
+				errors.push( 'Sensor tiles require device configuration (id or devices)' );
+			}
+			if ( !config.capabilityID && !config.devices ) {
+				errors.push( 'Sensor tiles require capability configuration (capabilityID or devices)' );
 			}
 			if ( !config.unit ) {
 				errors.push( 'Sensor tiles require a unit' );
@@ -109,11 +125,24 @@ export class TileFactory {
 		
 		if ( isTileOfType( config, 'BUTTON' ) ) {
 			// TypeScript knows this is ButtonTile
-			if ( !config.id ) {
-				errors.push( 'Button tiles require device id' );
+			if ( !config.id && !config.devices ) {
+				errors.push( 'Button tiles require device configuration (id or devices)' );
 			}
-			if ( !config.capabilityID && !config.flowID ) {
-				errors.push( 'Button tiles require either capabilityID or flowID' );
+			if ( !config.capabilityID && !config.flowID && !config.devices ) {
+				errors.push( 'Button tiles require either capabilityID/flowID or devices configuration' );
+			}
+		}
+		
+		if ( isTileOfType( config, 'APPLIANCES' ) ) {
+			// TypeScript knows this is AppliancesTile
+			if ( !config.id && !config.devices ) {
+				errors.push( 'Appliances tiles require device configuration (id or devices)' );
+			}
+			if ( config.maxRows && ![ 1, 2, ].includes( config.maxRows ) ) {
+				errors.push( 'Appliances tiles maxRows must be 1 or 2' );
+			}
+			if ( config.iconSize && ( config.iconSize < 12 || config.iconSize > 48 ) ) {
+				errors.push( 'Appliances tiles iconSize must be between 12 and 48' );
 			}
 		}
 		
@@ -160,6 +189,17 @@ export class TileFactory {
 					...commonDefaults,
 				} as Partial<TileConfigByType<T>>;
 			
+			case 'APPLIANCES':
+				return {
+					...commonDefaults,
+					width: 3,
+					height: 2,
+					maxRows: 2,
+					showNames: true,
+					iconSize: 24,
+					itemSpacing: 8,
+				} as Partial<TileConfigByType<T>>;
+			
 			case 'VIRTUAL':
 				return {
 					...commonDefaults,
@@ -189,15 +229,10 @@ export class TileFactory {
 		const deviceIds = new Set<string>();
 		
 		configs.forEach( config => {
-			if ( 'id' in config && config.id ) {
-				deviceIds.add( config.id );
-			}
+			const tileDeviceIds = getTileDeviceIds( config );
+			tileDeviceIds.forEach( id => deviceIds.add( id ) );
 			
-			// Handle popup tiles that contain other tiles
-			if ( isTileOfType( config, 'POPUP' ) && config.items ) {
-				const nestedDevices = this.getRequiredDevices( config.items );
-				nestedDevices.forEach( id => deviceIds.add( id ) );
-			}
+			// TODO: Handle popup tiles that contain other tiles when popup types are updated
 		} );
 		
 		return Array.from( deviceIds );

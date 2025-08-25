@@ -1,26 +1,35 @@
-import { Tile } from '../types';
+import { HomeyDevice, Tile, getTileDeviceCapabilities } from '../types';
 import { HomeyAPIV3LocalPatched } from 'homey-api';
 
 export abstract class BaseTile {
-	protected device: any | null;
+	protected deviceMap: Map<string, HomeyDevice>;
 	protected config: Tile;
 	protected element: HTMLElement;
 	protected homeyApi: HomeyAPIV3LocalPatched;
 	protected tileId: string;
 	private eventCleanupCallbacks: ( () => void )[] = [];
+	private deviceCapabilityMap: Array<{ deviceId: string; capabilityId: string; alias?: string }>;
 
 	constructor(
 		tileId: string,
-		device: any | null,
+		devices: HomeyDevice[],
 		config: Tile,
 		element: HTMLElement,
 		homeyApi: HomeyAPIV3LocalPatched
 	) {
 		this.tileId = tileId;
-		this.device = device;
 		this.config = config;
 		this.element = element;
 		this.homeyApi = homeyApi;
+		
+		// Create device map for fast lookups
+		this.deviceMap = new Map();
+		devices.forEach( device => this.deviceMap.set( device.id, device ) );
+		
+		// Extract device-capability combinations from config
+		this.deviceCapabilityMap = getTileDeviceCapabilities( config );
+		
+		console.log( `🔧 BaseTile initialized with ${devices.length} devices and ${this.deviceCapabilityMap.length} device-capability combinations` );
 	}
 
 /**
@@ -30,65 +39,53 @@ abstract render(): void;
 
 /**
  * Update tile when device state changes
+ * @param newValue - The new value from the device capability
+ * @param capabilityId - The capability that changed
+ * @param deviceId - The device that changed (for multi-device tiles)
  */
-abstract update( newValue: any, capability: string ): void;
+abstract update( newValue: any, capabilityId: string, deviceId?: string ): void;
 
 /**
  * Setup event listeners for this tile
  */
 protected async setupEventListeners(): Promise<void> {
-	const capabilityID = this.getCapabilityID();
-	if ( !this.device || !capabilityID ) return;
+	if ( this.deviceCapabilityMap.length === 0 ) {
+		console.warn( `No device-capability mappings found for tile ${this.tileId}` );
+		return;
+	}
 
 	try {
-		// Get the device from the HomeyAPI
-		const device = await this.homeyApi.devices.getDevice( { id: this.device.id, } );
-		
-		// Use makeCapabilityInstance to listen for capability changes
-		device.makeCapabilityInstance( capabilityID, ( newValue: any ) => {
-			// We don't have access to the old value in this API, so pass undefined
-			this.handleDeviceUpdate( newValue, undefined );
-		} );
+		// Set up listeners for each device-capability combination
+		for ( const mapping of this.deviceCapabilityMap ) {
+			const device = this.deviceMap.get( mapping.deviceId );
+			if ( !device ) {
+				console.warn( `Device ${mapping.deviceId} not found for tile ${this.tileId}` );
+				continue;
+			}
 
-		console.log( `✅ Setup device listener for tile ${this.tileId}:${this.device.id}:${capabilityID}` );
-		
-		// Store cleanup function (though HomeyAPI doesn't provide direct removal)
-		const cleanup = () => {
-			console.log( `🔄 Cleanup requested for tile ${this.tileId} (HomeyAPI doesn't support direct listener removal)` );
-		};
+			// Create capability instance listener
+			const cleanup = device.makeCapabilityInstance( mapping.capabilityId, ( newValue: any ) => {
+				this.handleDeviceUpdate( newValue, undefined, mapping.deviceId, mapping.capabilityId );
+			} );
 
-		this.eventCleanupCallbacks.push( cleanup );
-		
+			// Store cleanup callback if the API provides one
+			if ( typeof cleanup === 'function' ) {
+				this.eventCleanupCallbacks.push( cleanup );
+			}
+
+			console.log( `✅ Setup device listener for tile ${this.tileId}:${mapping.deviceId}:${mapping.capabilityId}` );
+		}
 	} catch ( error ) {
-		console.error( `❌ Failed to setup device listener for tile ${this.tileId}:`, error );
+		console.error( `❌ Failed to setup device listeners for tile ${this.tileId}:`, error );
 	}
 }
 
 /**
  * Handle device state updates
  */
-protected handleDeviceUpdate( newValue: any, oldValue: any ): void {
-	const capabilityID = this.getCapabilityID();
-	console.log( `🔄 Device update for tile ${this.tileId}:`, { newValue, oldValue, } );
-	if ( capabilityID ) {
-		this.update( newValue, capabilityID );
-	}
-}
-
-/**
- * Cleanup tile resources
- */
-public destroy(): void {
-// Clean up event listeners
-	this.eventCleanupCallbacks.forEach( cleanup => cleanup() );
-	this.eventCleanupCallbacks = [];
-
-	// Remove from DOM if still attached
-	if ( this.element.parentNode ) {
-		this.element.parentNode.removeChild( this.element );
-	}
-
-	console.log( `🗑️ Destroyed tile: ${this.tileId}` );
+protected handleDeviceUpdate( newValue: any, oldValue: any, deviceId: string, capabilityId: string ): void {
+	console.log( `🔄 Device update for tile ${this.tileId}:`, { deviceId, capabilityId, newValue, oldValue, } );
+	this.update( newValue, capabilityId, deviceId );
 }
 
 // Utility methods for child classes
@@ -170,44 +167,127 @@ protected showClickFeedback(): void {
 	}, 150 );
 }
 
-protected getCapabilityValue(): any {
-	const capabilityID = this.getCapabilityID();
-	if ( !this.device || !capabilityID ) return undefined;
-	const capability = ( this.device as any ).capabilitiesObj[capabilityID];
+protected getCapabilityValue( deviceId: string, capabilityId: string ): any {
+	const device = this.deviceMap.get( deviceId );
+	if ( !device || !capabilityId ) return undefined;
+	
+	const capability = device.capabilitiesObj[capabilityId];
 	return capability ? capability.value : undefined;
 }
 
-protected getCapability(): any {
-	const capabilityID = this.getCapabilityID();
-	if ( !this.device || !capabilityID ) return undefined;
-	return this.device.capabilitiesObj[capabilityID];
+protected getCapability( deviceId: string, capabilityId: string ): any {
+	const device = this.deviceMap.get( deviceId );
+	if ( !device || !capabilityId ) return undefined;
+	
+	return device.capabilitiesObj[capabilityId];
 }
 
 /**
- * Get the capability ID for this tile - subclasses can override this
+ * Get the first device-capability combination for this tile (for backward compatibility)
+ */
+protected getPrimaryDeviceCapability(): { deviceId: string; capabilityId: string } | undefined {
+	return this.deviceCapabilityMap[0];
+}
+
+/**
+ * Get all device-capability combinations for this tile
+ */
+protected getAllDeviceCapabilities(): Array<{ deviceId: string; capabilityId: string; alias?: string }> {
+	return [ ...this.deviceCapabilityMap, ];
+}
+
+/**
+ * Get a device by ID
+ */
+protected getDevice( deviceId: string ): HomeyDevice | undefined {
+	return this.deviceMap.get( deviceId );
+}
+
+/**
+ * Get all devices for this tile
+ */
+protected getAllDevices(): HomeyDevice[] {
+	return Array.from( this.deviceMap.values() );
+}
+
+/**
+ * Check if this tile has multiple devices
+ */
+protected isMultiDevice(): boolean {
+	return this.deviceMap.size > 1;
+}
+
+/**
+ * Check if this tile has multiple capabilities (across all devices)
+ */
+protected hasMultipleCapabilities(): boolean {
+	return this.deviceCapabilityMap.length > 1;
+}
+
+/**
+ * Set capability value for a specific device
+ */
+protected async setCapabilityValue( deviceId: string, capabilityId: string, value: any ): Promise<void> {
+	try {
+		await this.homeyApi.devices.setCapabilityValue( {
+			deviceId,
+			capabilityId,
+			value,
+		} );
+	} catch ( error ) {
+		console.error( `Failed to set capability value for ${deviceId}:${capabilityId}:`, error );
+		throw error;
+	}
+}
+
+/**
+ * Set capability value for all devices with the given capability
+ */
+protected async setCapabilityValueAll( capabilityId: string, value: any ): Promise<void> {
+	const promises = this.deviceCapabilityMap
+		.filter( mapping => mapping.capabilityId === capabilityId )
+		.map( mapping => this.setCapabilityValue( mapping.deviceId, capabilityId, value ) );
+	
+	await Promise.all( promises );
+}
+
+/**
+ * Legacy method for backward compatibility - gets the capability ID from the first device
+ * @deprecated Use getPrimaryDeviceCapability() instead
  */
 protected getCapabilityID(): string | undefined {
-	// Use type-safe property access
-	if ( 'capabilityID' in this.config ) {
-		return this.config.capabilityID;
-	}
-	return undefined;
+	const primary = this.getPrimaryDeviceCapability();
+	return primary?.capabilityId;
 }
 
 /**
- * Get the device ID for this tile
+ * Legacy method for backward compatibility - gets the device ID from the first device
+ * @deprecated Use getPrimaryDeviceCapability() instead
  */
 protected getDeviceID(): string | undefined {
-	if ( 'id' in this.config ) {
-		return this.config.id;
-	}
-	return undefined;
+	const primary = this.getPrimaryDeviceCapability();
+	return primary?.deviceId;
 }
 
 /**
  * Check if this tile is connected to a device
  */
 protected isDeviceTile(): boolean {
-	return 'id' in this.config && 'capabilityID' in this.config;
+	return this.deviceCapabilityMap.length > 0;
+}
+
+/**
+ * Cleanup method to remove event listeners
+ */
+public cleanup(): void {
+	this.eventCleanupCallbacks.forEach( cleanup => cleanup() );
+	this.eventCleanupCallbacks = [];
+}
+
+/**
+ * Get device IDs used by this tile (public method for external access)
+ */
+public getDeviceIds(): string[] {
+	return Array.from( this.deviceMap.keys() );
 }
 }

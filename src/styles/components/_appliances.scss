@@ -1,0 +1,203 @@
+/* Appliances Tile Styles */
+.appliances-tile {
+  background: var(--tile-background, #fff);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.appliances-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  background: var(--tile-header-background, #f5f5f5);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text-color, #333);
+}
+
+.appliances-container {
+  display: flex;
+  flex: 1;
+  padding: 8px;
+  gap: 8px;
+}
+
+.appliances-column {
+  flex: 1;
+  display: grid;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.appliances-column-non-dimmable {
+  /* Non-dimmable devices column - left side */
+  border-right: 1px solid var(--border-color, #e0e0e0);
+  margin-right: 4px;
+  padding-right: 4px;
+}
+
+.appliances-column-dimmable {
+  /* Dimmable devices column - right side */
+  border-left: 1px solid var(--border-color, #e0e0e0);
+  margin-left: 4px;
+  padding-left: 4px;
+}
+
+.appliance-device {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 8px;
+  background: var(--tile-background, #fff);
+  border: 1px solid var(--border-color, #e0e0e0);
+  transition: all 0.2s ease;
+  min-height: 50px;
+  position: relative;
+  user-select: none;
+}
+
+.appliance-device:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  border-color: var(--primary-color, #2196F3);
+}
+
+.appliance-device:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.appliance-device.appliance-device-on {
+  background: var(--tile-active-background, #4CAF50);
+  color: white;
+  border-color: var(--tile-active-border, #45a049);
+}
+
+.appliance-device.appliance-device-dimming {
+  background: var(--tile-dimming-background, #2196F3);
+  color: white;
+  border-color: var(--tile-dimming-border, #1976D2);
+}
+
+.appliance-device-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.appliance-device-icon i {
+  font-size: 24px;
+  transition: color 0.2s ease;
+}
+
+.appliance-device-icon img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  filter: brightness(1);
+  transition: filter 0.2s ease;
+}
+
+.appliance-device.appliance-device-on .appliance-device-icon img {
+  filter: brightness(1.2);
+}
+
+.appliance-device-name {
+  font-size: 10px;
+  font-weight: 500;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  line-height: 1.2;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .appliances-container {
+    padding: 4px;
+    gap: 4px;
+  }
+  
+  .appliances-column {
+    gap: 4px;
+  }
+  
+  .appliance-device {
+    padding: 6px;
+    min-height: 40px;
+  }
+  
+  .appliance-device-icon i {
+    font-size: 20px;
+  }
+  
+  .appliance-device-icon img {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .appliance-device-name {
+    font-size: 9px;
+  }
+  
+  .appliances-header {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+  .appliances-tile {
+    background: var(--tile-background-dark, #2d2d2d);
+  }
+  
+  .appliances-header {
+    background: var(--tile-header-background-dark, #3d3d3d);
+    color: var(--text-color-dark, #fff);
+    border-bottom-color: var(--border-color-dark, #4d4d4d);
+  }
+  
+  .appliance-device {
+    background: var(--tile-background-dark, #2d2d2d);
+    border-color: var(--border-color-dark, #4d4d4d);
+    color: var(--text-color-dark, #fff);
+  }
+  
+  .appliance-device:hover {
+    border-color: var(--primary-color-dark, #64B5F6);
+  }
+}
+
+/* Animation for state changes */
+.appliance-device {
+  animation: none;
+}
+
+.appliance-device.state-change {
+  animation: pulse 0.3s ease-in-out;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* Error state */
+.appliance-device.error {
+  background: var(--tile-error-background, #f44336) !important;
+  color: white !important;
+  border-color: var(--tile-error-border, #d32f2f) !important;
+}

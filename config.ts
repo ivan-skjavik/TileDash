@@ -55,90 +55,102 @@ export const appConfig: AppConfig = {
 							timeScroll: 5, // Time in seconds for scrolling images
 							id: "tile-image-1", // Define which id you want but use a different id for each IMAGE type in your dashboard
 						},
-						TileFactory.createConfig( 'SLIDER', {
-							position: [ 0, 3, ],
-							id: "56b58d98-3604-42e7-9945-8575d88fd8f3",
-							name: "Taklys Kontor",
-							orientation: 'horizontal', 
-							width: 3,
-							height: 1,
-							minValue: 0, 
-							maxValue: 1,
-							step: 0.01,
-							capabilityID: "dim",
-							icon: "mdi-lightbulb",
+						TileFactory.createConfig( 'APPLIANCES', {
+							position: [ 0, 2, ],
+							width: 8,
+							height: 8,
+							name: "Kontor Appliances",
+							devices: [
+								{ deviceId: '56b58d98-3604-42e7-9945-8575d88fd8f3', capabilityId: 'dim', alias: 'taklys_kontor', /* title, icon, minValue, maxValue (default 0/1), step(default) */},
+								{ deviceId: '15575f05-1d5c-4c37-95d6-2fce7f4712b1', capabilityId: 'onoff', alias: 'taklys_loft', /* title, icon, minValue, maxValue (default 0/1), step(default) */},
+								{ deviceId: '56b58d98-3604-42e7-9945-8575d88fd8f3', capabilityId: 'dim', alias: 'taklys_kontor_dim', },
+								{ deviceId: '20dcccf8-3734-4a67-994b-1f6171af177c', capabilityId: 'dim', alias: 'taklys_bad', },
+							],
 						} ),
-						TileFactory.createConfig( 'SLIDER', {
-							position: [ 0, 4, ],
-							id: "15575f05-1d5c-4c37-95d6-2fce7f4712b1",
-							name: "Taklys Loftstue",
-							orientation: 'horizontal',
-							width: 4,
-							height: 1,
-							minValue: 0, 
-							maxValue: 1, 
-							step: 0.01, 
-							capabilityID: "dim",
-							icon: "mdi-lightbulb",
-						} ),
-						{
-							position: [ 0, 5, ],
-							id: "20dcccf8-3734-4a67-994b-1f6171af177c",
-							name: "Taklys Bad",
-							type: "SLIDER",
-							orientation: 'horizontal', 
-							width: 4,
-							height: 1,
-							minValue: 0, 
-							maxValue: 1, 
-							step: 0.01, 
-							capabilityID: "dim",
-							icon: "mdi-lightbulb",
-						},
-						{
-							position: [ 0, 6, ],
-							name: "Baklys TV",
-							type: "SLIDER",
-							orientation: 'horizontal', 
-							width: 4,
-							height: 1,
-							minValue: 0, 
-							maxValue: 1, 
-							step: 0.01, 
-							id: "850913f1-3f1c-4de4-8ba7-d127b4d7962b",
-							capabilityID: "dim",
-							icon: "mdi-lightbulb",
-						},
-						{
-							position: [ 0, 4, ],
-							name: "Bedroom",
-							type: "GAUGE",
-							width: 2, // need to be at least 2
-							height: 2, // need to be at least 2
-							id: "e8e90f63-fb14-4e21-9d94-1110cd2b4493",
-							capabilityID: "measure_temperature",
-							icon: "mdi-thermometer",
-							unit: "°C",
-							maxValue: 35,
-							secondValue:{
-								capabilityID: 'measure_humidity',
-								icon: 'mdi-water-percent',
-								unit: '%',
-							},
-							stepColor: { // define different colors depending on the values. If set, 'prim' and 'sec' must to be defined
-								prim: {
-									color: 'cyan', // or #0000ff color, or rgb(120,120,120)
-									step: 18, // 0 to 18
-								},
-								sec: {
-									color: 'lime',
-									step: 25, // 18 to 25
-								},
-								third: { //third is optionnal
-									color: 'red', // higher than sec step  
-								},
-							},
-						},
+						// TileFactory.createConfig( 'SLIDER', {
+						// 	position: [ 0, 3, ],
+						// 	id: "56b58d98-3604-42e7-9945-8575d88fd8f3",
+						// 	name: "Taklys Kontor",
+						// 	orientation: 'horizontal', 
+						// 	width: 3,
+						// 	height: 1,
+						// 	minValue: 0, 
+						// 	maxValue: 1,
+						// 	step: 0.01,
+						// 	capabilityID: "dim",
+						// 	icon: "mdi-lightbulb",
+						// } ),
+						// TileFactory.createConfig( 'SLIDER', {
+						// 	position: [ 0, 4, ],
+						// 	id: "15575f05-1d5c-4c37-95d6-2fce7f4712b1",
+						// 	name: "Taklys Loftstue",
+						// 	orientation: 'horizontal',
+						// 	width: 4,
+						// 	height: 1,
+						// 	minValue: 0, 
+						// 	maxValue: 1, 
+						// 	step: 0.01, 
+						// 	capabilityID: "dim",
+						// 	icon: "mdi-lightbulb",
+						// } ),
+						// {
+						// 	position: [ 0, 5, ],
+						// 	id: "20dcccf8-3734-4a67-994b-1f6171af177c",
+						// 	name: "Taklys Bad",
+						// 	type: "SLIDER",
+						// 	orientation: 'horizontal', 
+						// 	width: 4,
+						// 	height: 1,
+						// 	minValue: 0, 
+						// 	maxValue: 1, 
+						// 	step: 0.01, 
+						// 	capabilityID: "dim",
+						// 	icon: "mdi-lightbulb",
+						// },
+						// {
+						// 	position: [ 0, 6, ],
+						// 	name: "Baklys TV",
+						// 	type: "SLIDER",
+						// 	orientation: 'horizontal', 
+						// 	width: 4,
+						// 	height: 1,
+						// 	minValue: 0, 
+						// 	maxValue: 1, 
+						// 	step: 0.01, 
+						// 	id: "850913f1-3f1c-4de4-8ba7-d127b4d7962b",
+						// 	capabilityID: "dim",
+						// 	icon: "mdi-lightbulb",
+						// },
+						// {
+						// 	position: [ 0, 4, ],
+						// 	name: "Bedroom",
+						// 	type: "GAUGE",
+						// 	width: 2, // need to be at least 2
+						// 	height: 2, // need to be at least 2
+						// 	id: "e8e90f63-fb14-4e21-9d94-1110cd2b4493",
+						// 	capabilityID: "measure_temperature",
+						// 	icon: "mdi-thermometer",
+						// 	unit: "°C",
+						// 	maxValue: 35,
+						// 	secondValue:{
+						// 		capabilityID: 'measure_humidity',
+						// 		icon: 'mdi-water-percent',
+						// 		unit: '%',
+						// 	},
+						// 	stepColor: { // define different colors depending on the values. If set, 'prim' and 'sec' must to be defined
+						// 		prim: {
+						// 			color: 'cyan', // or #0000ff color, or rgb(120,120,120)
+						// 			step: 18, // 0 to 18
+						// 		},
+						// 		sec: {
+						// 			color: 'lime',
+						// 			step: 25, // 18 to 25
+						// 		},
+						// 		third: { //third is optionnal
+						// 			color: 'red', // higher than sec step  
+						// 		},
+						// 	},
+						// },
 					],
 				},
 				{

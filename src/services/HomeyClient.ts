@@ -2,6 +2,7 @@ import { AthomCloudAPI, HomeyAPIV3Local } from 'homey-api';
 import { TokenStorage } from './TokenStorage';
 import { URLManager } from '../utils';
 import { HomeyAPIV3LocalPatched } from 'homey-api';
+import { HomeyDevice } from '@/types';
 
 export class HomeyClient {
 	private api: AthomCloudAPI | null = null;
@@ -11,7 +12,7 @@ export class HomeyClient {
 	private CLIENT_ID: string;
 	private CLIENT_SECRET: string;
 	private REDIRECT_URL: string;
-	public _devices = new Map<string, HomeyAPIV3Local.ManagerDevices.Device>();
+	public _devices = new Map<string, HomeyDevice>();
 
 	constructor() {
 		// Load OAuth credentials from environment variables
@@ -181,7 +182,7 @@ export class HomeyClient {
 	}
 
 	// Fetch all devices for metadata (e.g., device names)
-	private async getDevices( ) {
+	private async getDevices() {
 		try {
 			const api = this.getApi();
 
@@ -189,7 +190,7 @@ export class HomeyClient {
 
 			// insert all devices into this.devices 
 			for ( const [ deviceId, device, ] of Object.entries( devices ) ) {
-				this._devices.set( deviceId, device );
+				this._devices.set( deviceId, device as unknown as HomeyDevice ); // Hacky solution since Homey's device type is missing several things
 			}
 
 		} catch ( error ) {
