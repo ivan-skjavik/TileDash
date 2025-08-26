@@ -1,17 +1,12 @@
 import { BaseTile } from './BaseTile.js';
 import { AppliancesTile as AppliancesTileConfig, HomeyDevice } from '../types.js';
 import { HomeyAPIV3LocalPatched } from 'homey-api';
-import {
-	createMaterialToggle,
-	createMaterialSlider,
-	createControlItem,
-	createStatusIndicator,
-	updateMaterialToggle,
-	updateMaterialSlider,
-	updateControlItemState,
-	debounce,
-	type ControlItemOptions,
-} from '../utils/MaterialControls.js';
+
+// Import Shoelace components
+// import '@shoelace-style/shoelace/dist/components/switch/switch.js';
+// import '@shoelace-style/shoelace/dist/components/range/range.js';
+// import '@shoelace-style/shoelace/dist/components/badge/badge.js';
+// import '@shoelace-style/shoelace/dist/components/icon/icon.js';
 
 interface ApplianceDevice {
 	id: string;
@@ -27,9 +22,9 @@ export class AppliancesTile extends BaseTile {
 	private dimmableDevices: ApplianceDevice[] = [];
 	private controlElements: Map<string, HTMLElement> = new Map();
 	
-	// Debounced update functions
-	private debouncedToggleUpdate = debounce( this.updateToggleDevice.bind( this ), 300 );
-	private debouncedSliderUpdate = debounce( this.updateSliderDevice.bind( this ), 500 );
+	// Debounced update functions to prevent rapid API calls
+	private debouncedToggleUpdate = this.debounce( this.updateToggleDevice.bind( this ), 300 );
+	private debouncedSliderUpdate = this.debounce( this.updateSliderDevice.bind( this ), 500 );
 
 	constructor( 
 		tileId: string,
@@ -48,7 +43,7 @@ export class AppliancesTile extends BaseTile {
 		
 		// Setup event listeners for external updates
 		this.setupEventListeners().catch( error => {
-			console.error( `Failed to setup event listeners for AppliancesTile ${this.tileId}:`, error );
+			console.error( `Failed to setup event listeners for AppliancesTileShoelace ${this.tileId}:`, error );
 		} );
 	}
 
@@ -78,7 +73,7 @@ export class AppliancesTile extends BaseTile {
 				capabilities: device.capabilities || [],
 			};
 
-			// Categorize based on the capability specified in tile config, not device capabilities
+			// Categorize based on the capability specified in tile config
 			if ( mapping.capabilityId === 'dim' ) {
 				this.dimmableDevices.push( applianceDevice );
 			} else if ( mapping.capabilityId === 'onoff' ) {
@@ -86,66 +81,66 @@ export class AppliancesTile extends BaseTile {
 			}
 		}
 
-		// Sort devices by name for consistent ordering
-		// this.nonDimmableDevices.sort( ( a, b ) => a.device.name.localeCompare( b.device.name ) );
-		// this.dimmableDevices.sort( ( a, b ) => a.device.name.localeCompare( b.device.name ) );
+		console.log( `📝 Initialized AppliancesTileShoelace with ${this.nonDimmableDevices.length} switches and ${this.dimmableDevices.length} dimmers` );
 	}
 
 	private createDeviceControls(): void {
 		// Create controls for non-dimmable devices (left column)
 		this.nonDimmableDevices.forEach( appliance => {
-			const controlElement = this.createToggleControl( appliance );
+			const controlElement = this.createShoelaceToggleControl( appliance );
 			const controlKey = `${appliance.id}-onoff`;
 			this.controlElements.set( controlKey, controlElement );
 			this.leftColumn.appendChild( controlElement );
-			console.log( `📝 Created toggle control for ${appliance.device.name} with key: ${controlKey}` );
+			console.log( `📝 Created Shoelace toggle control for ${appliance.device.name}` );
 		} );
 
 		// Create controls for dimmable devices (right column)
 		this.dimmableDevices.forEach( appliance => {
-			const controlElement = this.createDimmerControl( appliance );
+			const controlElement = this.createShoelaceDimmerControl( appliance );
 			const controlKey = `${appliance.id}-dim`;
 			this.controlElements.set( controlKey, controlElement );
 			this.rightColumn.appendChild( controlElement );
-			console.log( `📝 Created dimmer control for ${appliance.device.name} with key: ${controlKey}` );
+			console.log( `📝 Created Shoelace dimmer control for ${appliance.device.name}` );
 		} );
 
-		console.log( `📋 Total control elements created: ${this.controlElements.size}` );
+		console.log( `📋 Total Shoelace control elements created: ${this.controlElements.size}` );
 	}
 
-	private createToggleControl( appliance: ApplianceDevice ): HTMLElement {
+	private createShoelaceToggleControl( appliance: ApplianceDevice ): HTMLElement {
 		const { device, id, } = appliance;
 		const isOnline = true; // HomeyDevice doesn't have available property - assume online
 		const isOn = device.capabilitiesObj?.onoff?.value ?? false;
 
-		// Create toggle switch
-		const toggle = createMaterialToggle( {
-			id: `toggle-${id}`,
-			checked: isOn,
-			disabled: !isOnline,
-			onChange: ( checked ) => this.debouncedToggleUpdate( id, checked ),
-			ariaLabel: `Toggle ${device.name}`,
+		// Create Shoelace switch
+		const switchElement = document.createElement( 'sl-switch' ) as any;
+		switchElement.checked = isOn;
+		switchElement.disabled = !isOnline;
+		switchElement.addEventListener( 'sl-change', ( e: any ) => {
+			this.debouncedToggleUpdate( id, e.target.checked );
 		} );
+
+		// Create status badge
+		const statusBadge = document.createElement( 'sl-badge' );
+		statusBadge.setAttribute( 'variant', isOnline ? 'success' : 'neutral' );
+		statusBadge.setAttribute( 'pill', '' );
 		
-		// Create status indicator
-		const statusIndicator = createStatusIndicator( isOnline );
+		const statusIcon = document.createElement( 'sl-icon' );
+		statusIcon.setAttribute( 'name', isOnline ? 'wifi' : 'wifi-off' );
+		statusBadge.appendChild( statusIcon );
 
-		// Create control container with title and status
-		const controlInfo = document.createElement( 'div' );
-		controlInfo.style.display = 'flex';
-		controlInfo.style.alignItems = 'center';
-		controlInfo.appendChild( toggle );
-		controlInfo.appendChild( statusIndicator );
+		// Create control container
+		const controlItem = this.createControlItem( 
+			device.name, 
+			this.getDeviceSubtitle( device ), 
+			switchElement,
+			statusBadge,
+			isOnline ? ( isOn ? 'active' : 'inactive' ) : 'unavailable'
+		);
 
-		return createControlItem( {
-			title: device.name,
-			subtitle: this.getDeviceSubtitle( device ),
-			control: controlInfo,
-			state: isOnline ? ( isOn ? 'active' : undefined ) : 'unavailable',
-		} );
+		return controlItem;
 	}
 
-	private createDimmerControl( appliance: ApplianceDevice ): HTMLElement {
+	private createShoelaceDimmerControl( appliance: ApplianceDevice ): HTMLElement {
 		const { device, id, } = appliance;
 		const isOnline = true; // HomeyDevice doesn't have available property - assume online
 		const dimValue = device.capabilitiesObj?.dim?.value ?? 0;
@@ -154,39 +149,90 @@ export class AppliancesTile extends BaseTile {
 		// Convert 0-1 range to 0-100 for the slider
 		const sliderValue = Math.round( dimValue * 100 );
 
-		// Create dimmer slider
-		const slider = createMaterialSlider( {
-			id: `slider-${id}`,
-			value: sliderValue,
-			min: 0,
-			max: 100,
-			step: 1,
-			disabled: !isOnline,
-			onChange: ( value ) => this.debouncedSliderUpdate( id, value ),
-			showValue: true,
-			unit: '%',
-			ariaLabel: `Adjust brightness for ${device.name}`,
-		} );
+		// Create Shoelace range slider
+		const rangeElement = document.createElement( 'sl-range' ) as any;
+		rangeElement.min = 0;
+		rangeElement.max = 100;
+		rangeElement.value = sliderValue;
+		rangeElement.step = 1;
+		rangeElement.disabled = !isOnline;
+		rangeElement.label = `Brightness for ${device.name}`;
 		
-		// Create status indicator
-		const statusIndicator = createStatusIndicator( isOnline );
+		// Add prefix icon and suffix text
+		const prefixIcon = document.createElement( 'sl-icon' );
+		prefixIcon.setAttribute( 'name', 'lightbulb' );
+		prefixIcon.setAttribute( 'slot', 'prefix' );
+		rangeElement.appendChild( prefixIcon );
 
-		// Create control container with slider and status
-		const controlInfo = document.createElement( 'div' );
-		controlInfo.style.display = 'flex';
-		controlInfo.style.alignItems = 'center';
-		controlInfo.style.gap = '12px';
-		controlInfo.appendChild( slider );
-		controlInfo.appendChild( statusIndicator );
+		const suffixText = document.createElement( 'span' );
+		suffixText.setAttribute( 'slot', 'suffix' );
+		suffixText.textContent = '%';
+		rangeElement.appendChild( suffixText );
 
-		const controlOptions: ControlItemOptions = {
-			title: device.name,
-			subtitle: this.getDeviceSubtitle( device ),
-			control: controlInfo,
-			state: isOnline ? ( isOn && sliderValue > 0 ? 'active' : undefined ) : 'unavailable',
-		};
+		// Add event listener
+		rangeElement.addEventListener( 'sl-change', ( e: any ) => {
+			this.debouncedSliderUpdate( id, e.target.value );
+		} );
 
-		return createControlItem( controlOptions );
+		// Create status badge
+		const statusBadge = document.createElement( 'sl-badge' );
+		statusBadge.setAttribute( 'variant', isOnline ? 'success' : 'neutral' );
+		statusBadge.setAttribute( 'pill', '' );
+		
+		const statusIcon = document.createElement( 'sl-icon' );
+		statusIcon.setAttribute( 'name', isOnline ? 'wifi' : 'wifi-off' );
+		statusBadge.appendChild( statusIcon );
+
+		// Create control container
+		const controlItem = this.createControlItem( 
+			device.name, 
+			this.getDeviceSubtitle( device ), 
+			rangeElement,
+			statusBadge,
+			isOnline ? ( isOn && sliderValue > 0 ? 'active' : 'inactive' ) : 'unavailable'
+		);
+
+		return controlItem;
+	}
+
+	private createControlItem( 
+		title: string, 
+		subtitle: string, 
+		control: HTMLElement,
+		statusBadge: HTMLElement,
+		state: 'active' | 'inactive' | 'unavailable' = 'inactive'
+	): HTMLElement {
+		const item = document.createElement( 'div' );
+		item.className = `control-item control-item--${state}`;
+
+		const header = document.createElement( 'div' );
+		header.className = 'control-item__header';
+
+		const info = document.createElement( 'div' );
+		info.className = 'control-item__info';
+
+		const titleElement = document.createElement( 'div' );
+		titleElement.className = 'control-item__title';
+		titleElement.textContent = title;
+
+		const subtitleElement = document.createElement( 'div' );
+		subtitleElement.className = 'control-item__subtitle';
+		subtitleElement.textContent = subtitle;
+
+		info.appendChild( titleElement );
+		info.appendChild( subtitleElement );
+
+		header.appendChild( info );
+		header.appendChild( statusBadge );
+
+		const controlContainer = document.createElement( 'div' );
+		controlContainer.className = 'control-item__control';
+		controlContainer.appendChild( control );
+
+		item.appendChild( header );
+		item.appendChild( controlContainer );
+
+		return item;
 	}
 
 	private getDeviceSubtitle( device: HomeyDevice ): string {
@@ -200,7 +246,7 @@ export class AppliancesTile extends BaseTile {
 		
 		try {
 			if ( controlElement ) {
-				updateControlItemState( controlElement, 'loading' );
+				controlElement.classList.add( 'control-item--loading' );
 			}
 
 			const device = this.deviceMap.get( deviceId );
@@ -209,23 +255,26 @@ export class AppliancesTile extends BaseTile {
 			}
 			
 			if ( controlElement ) {
-				updateControlItemState( controlElement, value ? 'active' : undefined );
+				controlElement.classList.remove( 'control-item--loading' );
+				controlElement.classList.toggle( 'control-item--active', value );
 			}
 		} catch ( error ) {
 			console.error( `Failed to update toggle for device ${deviceId}:`, error );
 			
 			if ( controlElement ) {
-				updateControlItemState( controlElement, 'error' );
-				// Revert the toggle state
-				const toggle = controlElement.querySelector( '.material-toggle' ) as HTMLElement;
-				if ( toggle ) {
-					updateMaterialToggle( toggle, !value );
+				controlElement.classList.remove( 'control-item--loading' );
+				controlElement.classList.add( 'control-item--error' );
+				
+				// Revert the switch state
+				const switchElement = controlElement.querySelector( 'sl-switch' ) as any;
+				if ( switchElement ) {
+					switchElement.checked = !value;
 				}
 				
 				// Reset error state after 2 seconds
 				setTimeout( () => {
 					if ( controlElement ) {
-						updateControlItemState( controlElement );
+						controlElement.classList.remove( 'control-item--error' );
 					}
 				}, 2000 );
 			}
@@ -237,7 +286,7 @@ export class AppliancesTile extends BaseTile {
 		
 		try {
 			if ( controlElement ) {
-				updateControlItemState( controlElement, 'loading' );
+				controlElement.classList.add( 'control-item--loading' );
 			}
 
 			const device = this.deviceMap.get( deviceId );
@@ -252,18 +301,20 @@ export class AppliancesTile extends BaseTile {
 			}
 			
 			if ( controlElement ) {
-				updateControlItemState( controlElement, value > 0 ? 'active' : undefined );
+				controlElement.classList.remove( 'control-item--loading' );
+				controlElement.classList.toggle( 'control-item--active', value > 0 );
 			}
 		} catch ( error ) {
 			console.error( `Failed to update dimmer for device ${deviceId}:`, error );
 			
 			if ( controlElement ) {
-				updateControlItemState( controlElement, 'error' );
+				controlElement.classList.remove( 'control-item--loading' );
+				controlElement.classList.add( 'control-item--error' );
 				
 				// Reset error state after 2 seconds
 				setTimeout( () => {
 					if ( controlElement ) {
-						updateControlItemState( controlElement );
+						controlElement.classList.remove( 'control-item--error' );
 					}
 				}, 2000 );
 			}
@@ -302,13 +353,13 @@ export class AppliancesTile extends BaseTile {
 
 		// Add to tile element
 		this.element.appendChild( this.controlsContainer );
-		this.element.className = 'tile appliances-tile';
+		this.element.className = 'tile appliances-tile appliances-tile--shoelace';
 	}
 
 	public update( newValue: any, capabilityId: string, deviceId?: string ): void {
 		if ( !deviceId ) return;
 
-		console.log( `🔄 AppliancesTile update: ${deviceId}:${capabilityId} = ${newValue}` );
+		console.log( `🔄 AppliancesTileShoelace update: ${deviceId}:${capabilityId} = ${newValue}` );
 
 		// Update device state in our maps
 		const device = this.deviceMap.get( deviceId );
@@ -318,42 +369,42 @@ export class AppliancesTile extends BaseTile {
 
 		// Update UI based on capability type
 		if ( capabilityId === 'onoff' ) {
-			this.updateToggleUI( deviceId, newValue );
+			this.updateShoelaceToggleUI( deviceId, newValue );
 		} else if ( capabilityId === 'dim' ) {
-			this.updateSliderUI( deviceId, newValue );
+			this.updateShoelaceSliderUI( deviceId, newValue );
 		}
 	}
 
-	private updateToggleUI( deviceId: string, value: boolean ): void {
+	private updateShoelaceToggleUI( deviceId: string, value: boolean ): void {
 		const controlKey = `${deviceId}-onoff`;
 		const controlElement = this.controlElements.get( controlKey );
-		console.log( `🔄 updateToggleUI: ${deviceId} = ${value}, controlKey: ${controlKey}, found: ${!!controlElement}` );
+		console.log( `🔄 updateShoelaceToggleUI: ${deviceId} = ${value}` );
 		
 		if ( controlElement ) {
-			const toggle = controlElement.querySelector( '.material-toggle' ) as HTMLElement;
-			if ( toggle ) {
-				updateMaterialToggle( toggle, value );
+			const switchElement = controlElement.querySelector( 'sl-switch' ) as any;
+			if ( switchElement ) {
+				switchElement.checked = value;
 			}
-			updateControlItemState( controlElement, value ? 'active' : undefined );
+			controlElement.classList.toggle( 'control-item--active', value );
 		} else {
 			console.warn( `Control element not found for key: ${controlKey}` );
 		}
 	}
 
-	private updateSliderUI( deviceId: string, value: number ): void {
+	private updateShoelaceSliderUI( deviceId: string, value: number ): void {
 		const controlKey = `${deviceId}-dim`;
 		const controlElement = this.controlElements.get( controlKey );
-		console.log( `🔄 updateSliderUI: ${deviceId} = ${value}, controlKey: ${controlKey}, found: ${!!controlElement}` );
+		console.log( `🔄 updateShoelaceSliderUI: ${deviceId} = ${value}` );
 		
 		if ( controlElement ) {
-			const slider = controlElement.querySelector( '.material-slider' ) as HTMLElement;
-			if ( slider ) {
-				updateMaterialSlider( slider, Math.round( value * 100 ), '%' );
+			const rangeElement = controlElement.querySelector( 'sl-range' ) as any;
+			if ( rangeElement ) {
+				rangeElement.value = Math.round( value * 100 );
 			}
 			
 			const device = this.deviceMap.get( deviceId );
 			const isOn = device?.capabilitiesObj?.onoff?.value ?? false;
-			updateControlItemState( controlElement, isOn && value > 0 ? 'active' : undefined );
+			controlElement.classList.toggle( 'control-item--active', isOn && value > 0 );
 		} else {
 			console.warn( `Control element not found for key: ${controlKey}` );
 		}
@@ -361,5 +412,14 @@ export class AppliancesTile extends BaseTile {
 
 	public getElement(): HTMLElement {
 		return this.element;
+	}
+
+	// Utility function for debouncing
+	private debounce<T extends ( ...args: any[] ) => any>( func: T, wait: number ): T {
+		let timeout: NodeJS.Timeout;
+		return ( ( ...args: any[] ) => {
+			clearTimeout( timeout );
+			timeout = setTimeout( () => func.apply( this, args ), wait );
+		} ) as T;
 	}
 }

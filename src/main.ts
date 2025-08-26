@@ -13,11 +13,7 @@ import '@shoelace-style/shoelace/dist/themes/light.css';
 import '@shoelace-style/shoelace/dist/components/switch/switch.js';
 import '@shoelace-style/shoelace/dist/components/range/range.js';
 import '@shoelace-style/shoelace/dist/components/badge/badge.js';
-import '@shoelace-style/shoelace/dist/components/icon/icon.js';
 
-// Set base path for Shoelace assets
-import { setBasePath } from '@shoelace-style/shoelace/dist/utilities/base-path.js';
-setBasePath( 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.1/cdn/' );
 
 declare global {
   interface Window {
