@@ -8,3 +8,6 @@
 /* Theme definitions (colors, shadows, borders only) */
 @use 'themes/light';
 @use 'themes/dark';
+
+/* Import Shoelace tile styles */
+@import 'components/appliances-tile-shoelace';

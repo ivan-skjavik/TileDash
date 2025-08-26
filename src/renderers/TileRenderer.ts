@@ -5,7 +5,8 @@ import { SwitchTile } from '../tiles/SwitchTile';
 import { SensorTile } from '../tiles/SensorTile';
 import { ButtonTile } from '../tiles/ButtonTile';
 import { HomeyClient } from '../services/HomeyClient';
-import { AppliancesTile } from '@/tiles/AppliancesTile';
+import { AppliancesTile } from '@/tiles/AppliancesTileShoelace';
+// import { AppliancesTile } from '@/tiles/AppliancesTile';
 
 export class TileRenderer {
 	private container: HTMLElement | null;
