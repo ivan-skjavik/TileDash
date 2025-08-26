@@ -5,15 +5,14 @@ import { TileRenderer } from './renderers/TileRenderer';
 import HomeyClient from './services/HomeyClient';
 import { ThemeManager } from './services/ThemeManager';
 
-// Import SCSS styles
-import './styles/main.scss';
-
 // Import Shoelace components and styles
 import '@shoelace-style/shoelace/dist/themes/light.css';
 import '@shoelace-style/shoelace/dist/components/switch/switch.js';
 import '@shoelace-style/shoelace/dist/components/range/range.js';
 import '@shoelace-style/shoelace/dist/components/badge/badge.js';
 
+// Import SCSS styles
+import './styles/main.scss';
 
 declare global {
   interface Window {

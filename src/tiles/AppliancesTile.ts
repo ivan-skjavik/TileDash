@@ -2,12 +2,6 @@ import { BaseTile } from './BaseTile.js';
 import { AppliancesTile as AppliancesTileConfig, HomeyDevice } from '../types.js';
 import { HomeyAPIV3LocalPatched } from 'homey-api';
 
-// Import Shoelace components
-// import '@shoelace-style/shoelace/dist/components/switch/switch.js';
-// import '@shoelace-style/shoelace/dist/components/range/range.js';
-// import '@shoelace-style/shoelace/dist/components/badge/badge.js';
-// import '@shoelace-style/shoelace/dist/components/icon/icon.js';
-
 interface ApplianceDevice {
 	id: string;
 	device: HomeyDevice;
@@ -15,7 +9,7 @@ interface ApplianceDevice {
 }
 
 export class AppliancesTile extends BaseTile {
-	private controlsContainer: HTMLElement;
+	private tileContainer: HTMLElement;
 	private leftColumn: HTMLElement;
 	private rightColumn: HTMLElement;
 	private nonDimmableDevices: ApplianceDevice[] = [];
@@ -34,7 +28,7 @@ export class AppliancesTile extends BaseTile {
 		homeyApi: HomeyAPIV3LocalPatched
 	) {
 		super( tileId, devices, config, element, homeyApi );
-		this.controlsContainer = this.createControlsContainer();
+		this.tileContainer = this.createTileContainer();
 		this.leftColumn = this.createColumn( 'left' );
 		this.rightColumn = this.createColumn( 'right' );
 		
@@ -47,15 +41,15 @@ export class AppliancesTile extends BaseTile {
 		} );
 	}
 
-	private createControlsContainer(): HTMLElement {
+	private createTileContainer(): HTMLElement {
 		const container = document.createElement( 'div' );
-		container.className = 'appliances-tile__controls';
+		container.className = 'tile-container';
 		return container;
 	}
 
 	private createColumn( side: 'left' | 'right' ): HTMLElement {
 		const column = document.createElement( 'div' );
-		column.className = `appliances-tile__column appliances-tile__column--${side}`;
+		column.className = `tile-column appliances-tile-column --${side}`;
 		return column;
 	}
 
@@ -89,8 +83,11 @@ export class AppliancesTile extends BaseTile {
 		this.nonDimmableDevices.forEach( appliance => {
 			const controlElement = this.createShoelaceToggleControl( appliance );
 			const controlKey = `${appliance.id}-onoff`;
-			this.controlElements.set( controlKey, controlElement );
-			this.leftColumn.appendChild( controlElement );
+			this.controlElements.set( controlKey, controlElement[1] );
+
+			this.leftColumn.appendChild( controlElement[0] );
+			this.leftColumn.appendChild( controlElement[1] );
+
 			console.log( `📝 Created Shoelace toggle control for ${appliance.device.name}` );
 		} );
 
@@ -98,147 +95,91 @@ export class AppliancesTile extends BaseTile {
 		this.dimmableDevices.forEach( appliance => {
 			const controlElement = this.createShoelaceDimmerControl( appliance );
 			const controlKey = `${appliance.id}-dim`;
-			this.controlElements.set( controlKey, controlElement );
-			this.rightColumn.appendChild( controlElement );
+			this.controlElements.set( controlKey, controlElement[1] );
+
+			this.rightColumn.appendChild( controlElement[0] );
+			this.rightColumn.appendChild( controlElement[1] );
+			this.rightColumn.appendChild( controlElement[2] );
+
 			console.log( `📝 Created Shoelace dimmer control for ${appliance.device.name}` );
 		} );
 
 		console.log( `📋 Total Shoelace control elements created: ${this.controlElements.size}` );
 	}
 
-	private createShoelaceToggleControl( appliance: ApplianceDevice ): HTMLElement {
+	private createShoelaceToggleControl( appliance: ApplianceDevice ): HTMLElement[] {
 		const { device, id, } = appliance;
 		const isOnline = true; // HomeyDevice doesn't have available property - assume online
 		const isOn = device.capabilitiesObj?.onoff?.value ?? false;
 
 		// Create Shoelace switch
-		const switchElement = document.createElement( 'sl-switch' ) as any;
+		const switchElement = document.createElement( 'sl-switch' );
 		switchElement.checked = isOn;
 		switchElement.disabled = !isOnline;
 		switchElement.addEventListener( 'sl-change', ( e: any ) => {
 			this.debouncedToggleUpdate( id, e.target.checked );
 		} );
 
-		// Create status badge
-		const statusBadge = document.createElement( 'sl-badge' );
-		statusBadge.setAttribute( 'variant', isOnline ? 'success' : 'neutral' );
-		statusBadge.setAttribute( 'pill', '' );
-		
-		const statusIcon = document.createElement( 'sl-icon' );
-		statusIcon.setAttribute( 'name', isOnline ? 'wifi' : 'wifi-off' );
-		statusBadge.appendChild( statusIcon );
+		const title = document.createElement( 'span' )
+		title.className = 'control-item-title';
+		title.textContent = device.name;
 
-		// Create control container
-		const controlItem = this.createControlItem( 
-			device.name, 
-			this.getDeviceSubtitle( device ), 
+		return [
+			title,
 			switchElement,
-			statusBadge,
-			isOnline ? ( isOn ? 'active' : 'inactive' ) : 'unavailable'
-		);
-
-		return controlItem;
+		];
 	}
 
-	private createShoelaceDimmerControl( appliance: ApplianceDevice ): HTMLElement {
+	private createShoelaceDimmerControl( appliance: ApplianceDevice ): HTMLElement[] {
 		const { device, id, } = appliance;
-		const isOnline = true; // HomeyDevice doesn't have available property - assume online
 		const dimValue = device.capabilitiesObj?.dim?.value ?? 0;
-		const isOn = device.capabilitiesObj?.onoff?.value ?? false;
 		
 		// Convert 0-1 range to 0-100 for the slider
 		const sliderValue = Math.round( dimValue * 100 );
 
 		// Create Shoelace range slider
-		const rangeElement = document.createElement( 'sl-range' ) as any;
+		const rangeElement = document.createElement( 'sl-range' );
 		rangeElement.min = 0;
 		rangeElement.max = 100;
 		rangeElement.value = sliderValue;
+		rangeElement.tooltip = "none";
 		rangeElement.step = 1;
-		rangeElement.disabled = !isOnline;
-		rangeElement.label = `Brightness for ${device.name}`;
 		
 		// Add prefix icon and suffix text
-		const prefixIcon = document.createElement( 'sl-icon' );
-		prefixIcon.setAttribute( 'name', 'lightbulb' );
-		prefixIcon.setAttribute( 'slot', 'prefix' );
-		rangeElement.appendChild( prefixIcon );
+		// const prefixIcon = document.createElement( 'sl-icon' );
+		// prefixIcon.setAttribute( 'name', 'lightbulb' );
+		// prefixIcon.setAttribute( 'slot', 'prefix' );
+		// rangeElement.appendChild( prefixIcon );
 
 		const suffixText = document.createElement( 'span' );
 		suffixText.setAttribute( 'slot', 'suffix' );
 		suffixText.textContent = '%';
 		rangeElement.appendChild( suffixText );
 
-		// Add event listener
-		rangeElement.addEventListener( 'sl-change', ( e: any ) => {
-			this.debouncedSliderUpdate( id, e.target.value );
+		// Create title element
+		const title = document.createElement( 'span' )
+		title.className = 'control-item-title';
+		title.textContent = device.name;
+
+		// Create percentage label
+		const percentageLabel = document.createElement( 'span' );
+		percentageLabel.className = 'control-item-percentage';
+		percentageLabel.textContent = sliderValue === 0 ? 'OFF' : `${sliderValue}%`;
+
+		// Add event listenerers
+		rangeElement.addEventListener( 'sl-input', ( e: any ) => {
+			percentageLabel.textContent = e.target.value === 0 ? 'OFF' : `${e.target.value}%`;
 		} );
 
-		// Create status badge
-		const statusBadge = document.createElement( 'sl-badge' );
-		statusBadge.setAttribute( 'variant', isOnline ? 'success' : 'neutral' );
-		statusBadge.setAttribute( 'pill', '' );
-		
-		const statusIcon = document.createElement( 'sl-icon' );
-		statusIcon.setAttribute( 'name', isOnline ? 'wifi' : 'wifi-off' );
-		statusBadge.appendChild( statusIcon );
+		rangeElement.addEventListener( 'sl-change', ( e: any ) => {
+			this.debouncedSliderUpdate( id, e.target.value, percentageLabel );
+		} );
 
-		// Create control container
-		const controlItem = this.createControlItem( 
-			device.name, 
-			this.getDeviceSubtitle( device ), 
+		return [
+			title,
 			rangeElement,
-			statusBadge,
-			isOnline ? ( isOn && sliderValue > 0 ? 'active' : 'inactive' ) : 'unavailable'
-		);
-
-		return controlItem;
-	}
-
-	private createControlItem( 
-		title: string, 
-		subtitle: string, 
-		control: HTMLElement,
-		statusBadge: HTMLElement,
-		state: 'active' | 'inactive' | 'unavailable' = 'inactive'
-	): HTMLElement {
-		const item = document.createElement( 'div' );
-		item.className = `control-item control-item--${state}`;
-
-		const header = document.createElement( 'div' );
-		header.className = 'control-item__header';
-
-		const info = document.createElement( 'div' );
-		info.className = 'control-item__info';
-
-		const titleElement = document.createElement( 'div' );
-		titleElement.className = 'control-item__title';
-		titleElement.textContent = title;
-
-		const subtitleElement = document.createElement( 'div' );
-		subtitleElement.className = 'control-item__subtitle';
-		subtitleElement.textContent = subtitle;
-
-		info.appendChild( titleElement );
-		info.appendChild( subtitleElement );
-
-		header.appendChild( info );
-		header.appendChild( statusBadge );
-
-		const controlContainer = document.createElement( 'div' );
-		controlContainer.className = 'control-item__control';
-		controlContainer.appendChild( control );
-
-		item.appendChild( header );
-		item.appendChild( controlContainer );
-
-		return item;
-	}
-
-	private getDeviceSubtitle( device: HomeyDevice ): string {
-		const zone = device.zone || 'Unknown Zone';
-		const deviceClass = device.class || 'Device';
-		return `${deviceClass} • ${zone}`;
+			percentageLabel,
+		];
 	}
 
 	private async updateToggleDevice( deviceId: string, value: boolean ): Promise<void> {
@@ -266,7 +207,7 @@ export class AppliancesTile extends BaseTile {
 				controlElement.classList.add( 'control-item--error' );
 				
 				// Revert the switch state
-				const switchElement = controlElement.querySelector( 'sl-switch' ) as any;
+				const switchElement = controlElement.querySelector( 'sl-switch' );
 				if ( switchElement ) {
 					switchElement.checked = !value;
 				}
@@ -281,7 +222,7 @@ export class AppliancesTile extends BaseTile {
 		}
 	}
 
-	private async updateSliderDevice( deviceId: string, value: number ): Promise<void> {
+	private async updateSliderDevice( deviceId: string, value: number, label?: HTMLElement ): Promise<void> {
 		const controlElement = this.controlElements.get( `${deviceId}-dim` );
 		
 		try {
@@ -303,6 +244,10 @@ export class AppliancesTile extends BaseTile {
 			if ( controlElement ) {
 				controlElement.classList.remove( 'control-item--loading' );
 				controlElement.classList.toggle( 'control-item--active', value > 0 );
+			}
+
+			if ( label ) {
+				label.textContent = `${value}%`;
 			}
 		} catch ( error ) {
 			console.error( `Failed to update dimmer for device ${deviceId}:`, error );
@@ -328,14 +273,14 @@ export class AppliancesTile extends BaseTile {
 		
 		// Create tile header
 		const header = document.createElement( 'div' );
-		header.className = 'appliances-tile__header';
+		header.className = 'tile-header';
 		
-		const title = document.createElement( 'h2' );
-		title.className = 'appliances-tile__title';
+		const title = document.createElement( 'span' );
+		title.className = 'tile-title';
 		title.textContent = this.config.name || 'Appliances';
 		
 		const subtitle = document.createElement( 'p' );
-		subtitle.className = 'appliances-tile__subtitle';
+		subtitle.className = 'tile-header-side';
 		subtitle.textContent = `${this.nonDimmableDevices.length + this.dimmableDevices.length} devices`;
 		
 		header.appendChild( title );
@@ -343,17 +288,17 @@ export class AppliancesTile extends BaseTile {
 
 		// Create columns container
 		const columnsContainer = document.createElement( 'div' );
-		columnsContainer.className = 'appliances-tile__columns';
+		columnsContainer.className = 'appliances-tile-columns tile-columns';
 		columnsContainer.appendChild( this.leftColumn );
 		columnsContainer.appendChild( this.rightColumn );
 
 		// Add everything to controls container
-		this.controlsContainer.appendChild( header );
-		this.controlsContainer.appendChild( columnsContainer );
+		this.tileContainer.appendChild( header );
+		this.tileContainer.appendChild( columnsContainer );
 
 		// Add to tile element
-		this.element.appendChild( this.controlsContainer );
-		this.element.className = 'tile appliances-tile appliances-tile--shoelace';
+		this.element.appendChild( this.tileContainer );
+		this.element.className = 'tile appliances-tile';
 	}
 
 	public update( newValue: any, capabilityId: string, deviceId?: string ): void {
@@ -381,7 +326,7 @@ export class AppliancesTile extends BaseTile {
 		console.log( `🔄 updateShoelaceToggleUI: ${deviceId} = ${value}` );
 		
 		if ( controlElement ) {
-			const switchElement = controlElement.querySelector( 'sl-switch' ) as any;
+			const switchElement = controlElement.querySelector( 'sl-switch' );
 			if ( switchElement ) {
 				switchElement.checked = value;
 			}
@@ -397,7 +342,7 @@ export class AppliancesTile extends BaseTile {
 		console.log( `🔄 updateShoelaceSliderUI: ${deviceId} = ${value}` );
 		
 		if ( controlElement ) {
-			const rangeElement = controlElement.querySelector( 'sl-range' ) as any;
+			const rangeElement = controlElement.querySelector( 'sl-range' );
 			if ( rangeElement ) {
 				rangeElement.value = Math.round( value * 100 );
 			}

@@ -9,13 +9,19 @@
 
 	/* Colors */
 	--app-background: #161e24;
-	--app-text-body: #ffffffd7;
+	--app-text-body: #ffffff83;
 	--app-color-primary: #24ccb8;
-	--app-color-secondary: #a0a0a0;
+	--sl-color-primary-500: #47b8aa; // Shoelace primary color
+	--sl-color-primary-600: #24ccb8; // Shoelace primary color
+	--app-color-secondary: #444e55;
+	--app-color-tertiary: #171f25;
 	--app-border-color: #333333;
 	--app-font-family: 'Helvetica Neue', Arial, sans-serif;
 	--app-line-height: 1.325;
 	--app-container-left-padding: 10px;
+
+	/* Various styles */
+
 	/* Header */
 	--header-background: transparent;
 	--header-shadow: none; //0 1px 3px rgba(0, 0, 0, 0.3);
@@ -62,7 +68,8 @@
 	--tile-shadow: none; //0 4px 12px rgba(0, 0, 0, 0.2);
 	--tile-shadow-hover: none; //0 8px 24px rgba(0, 0, 0, 0.3);
 	--tile-icon-color: #a0a0a0;
-	--tile-text-color: #e8e8e8;
+	--tile-text-color: #ffffffde;
+	--tile-header-text-color: #ffffff62;
 	--tile-value-color: #24ccb8;
 	
 	/* Tile states */

@@ -1,0 +1,56 @@
+/* Appliances Tile */
+
+/* ===== TILE STRUCTURE ===== */
+.appliances-tile {
+	height: 100%;
+}
+
+.appliances-tile__controls {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	gap: 16px;
+}
+
+/* ===== COLUMNS LAYOUT ===== */
+.appliances-tile-columns {
+	display: grid;
+	grid-template-columns: 40% 60%;
+	gap: 16px;
+	height: 100%;
+}
+
+.appliances-tile-column {
+	display: grid;
+	grid-template-columns: auto auto;
+	grid-auto-rows: min-content;
+	align-content: start;
+	justify-items: end;
+	gap: 8px;
+	overflow-y: auto;
+
+	&.--right {
+		grid-template-columns: auto auto auto;
+	}
+}
+
+.appliances-tile-column::-webkit-scrollbar {
+	width: 4px;
+}
+
+.appliances-tile-column::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.appliances-tile-column::-webkit-scrollbar-thumb {
+	background: var(--tile-icon-color);
+	border-radius: 2px;
+}
+
+.appliances-tile-column::-webkit-scrollbar-thumb:hover {
+	background: var(--tile-text-color);
+}
+
+
+
+
