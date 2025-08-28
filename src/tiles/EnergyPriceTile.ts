@@ -362,7 +362,7 @@ export class EnergyPriceTile extends BaseTile {
 
 		if ( currentPriceData ) {
 			const finalPrice = currentPriceData.ORE_per_kWh;
-			this.currentPriceElement.textContent = `${finalPrice.toFixed( 1 )} øre/kWh`;
+			this.currentPriceElement.textContent = `${finalPrice.toFixed( 2 )} øre/kWh`;
 			
 			// Add price level class for styling
 			const prices = this.priceData.map( item => item.ORE_per_kWh );
@@ -420,12 +420,59 @@ export class EnergyPriceTile extends BaseTile {
 	}
 }
 
-// Hot Module Reload support
+// Vite HMR Support - Smart instance swapping
 if ( import.meta.hot ) {
 	import.meta.hot.accept( ( newModule ) => {
-		if ( newModule && ( window as any ).hmr ) {
-			console.log( '🔥 EnergyPriceTile module updated, triggering HMR...' );
-			( window as any ).hmr.hotReloadTilesByType( 'ENERGY_PRICE' );
+		if ( newModule?.EnergyPriceTile ) {
+			console.log( '🔥 EnergyPriceTile class updated, swapping instances...' );
+			swapEnergyPriceTileInstances( newModule.EnergyPriceTile );
+		}
+	} );
+}
+
+function swapEnergyPriceTileInstances( NewEnergyPriceTile: typeof EnergyPriceTile ) {
+	const tileRenderer = ( window as any ).TileDashApp?.tileRenderer;
+	if ( !tileRenderer ) {
+		console.warn( 'TileRenderer not available for HMR' );
+		return;
+	}
+
+	// Access the tiles map through the public getter
+	const tilesMap = tileRenderer.tilesMap as Map<string, BaseTile>;
+	const instancesToSwap: Array<{ id: string; oldInstance: BaseTile }> = [];
+
+	// Find all EnergyPriceTile instances
+	tilesMap.forEach( ( instance, id ) => {
+		if ( instance instanceof EnergyPriceTile ) {
+			instancesToSwap.push( { id, oldInstance: instance, } );
+		}
+	} );
+
+	console.log( `🔄 Found ${instancesToSwap.length} EnergyPriceTile instances to swap` );
+
+	instancesToSwap.forEach( ( { id, oldInstance, } ) => {
+		try {
+			// Get instance data
+			const element = oldInstance.tileElement;
+			const config = oldInstance.tileConfig;
+			const devices = oldInstance.tileDevices;
+			const homeyApi = oldInstance.api;
+
+			// Clean up old instance
+			oldInstance.cleanup();
+
+			// Create new instance with updated class
+			const newInstance = new NewEnergyPriceTile( id, devices, config as any, element, homeyApi );
+
+			// Update registry
+			tilesMap.set( id, newInstance );
+
+			// Render new instance
+			newInstance.render();
+
+			console.log( `✅ Successfully swapped EnergyPriceTile instance: ${id}` );
+		} catch ( error ) {
+			console.error( `❌ Failed to swap EnergyPriceTile instance ${id}:`, error );
 		}
 	} );
 }

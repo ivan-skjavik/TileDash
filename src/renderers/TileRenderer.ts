@@ -15,7 +15,6 @@ export class TileRenderer {
 	private currentPageIndex: number = 0;
 	private pages: DashboardPage[] = [];
 	// private _config: AppConfig; // Stored for future use
-	private hmr: any = null; // HMR instance reference
 
 	constructor( containerId: string, homeyClient: HomeyClient /* config: AppConfig */ ) {
 		console.log( 'TileRenderer: Constructor called with containerId:', containerId );
@@ -32,13 +31,6 @@ export class TileRenderer {
 
 		// Add keyboard navigation support
 		this.setupKeyboardNavigation();
-	}
-
-	/**
-   * Set HMR instance for tile registration
-   */
-	public setHMR( hmr: any ): void {
-		this.hmr = hmr;
 	}
 
 	/**
@@ -158,11 +150,6 @@ export class TileRenderer {
 		// Register tile
 		this.tiles.set( tileId, tileInstance );
 
-		// Register with HMR if available
-		if ( this.hmr && import.meta.env.DEV ) {
-			this.hmr.registerTile( tileId, config, tileElement, tileInstance );
-		}
-
 		// Render tile content
 		tileInstance.render();
 
@@ -178,6 +165,13 @@ export class TileRenderer {
    */
 	public getTile( tileId: string ): BaseTile | undefined {
 		return this.tiles.get( tileId );
+	}
+
+	/**
+   * Get tiles map for HMR access
+   */
+	public get tilesMap(): Map<string, BaseTile> {
+		return this.tiles;
 	}
 
 	/**

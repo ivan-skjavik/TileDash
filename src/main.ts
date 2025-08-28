@@ -17,7 +17,6 @@ import './styles/main.scss';
 declare global {
   interface Window {
     TileDashApp: TileDashApp;
-    hmr?: any;
     persistedHomeyClient?: HomeyClient;
   }
 }

@@ -290,4 +290,21 @@ public cleanup(): void {
 public getDeviceIds(): string[] {
 	return Array.from( this.deviceMap.keys() );
 }
+
+// HMR Support - Public getters for tile reconstruction
+public get tileConfig(): Tile {
+	return this.config;
+}
+
+public get tileElement(): HTMLElement {
+	return this.element;
+}
+
+public get tileDevices(): HomeyDevice[] {
+	return Array.from( this.deviceMap.values() );
+}
+
+public get api(): HomeyAPIV3LocalPatched {
+	return this.homeyApi;
+}
 }
