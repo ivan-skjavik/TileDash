@@ -17,6 +17,8 @@ import './styles/main.scss';
 declare global {
   interface Window {
     TileDashApp: TileDashApp;
+    hmr?: any;
+    persistedHomeyClient?: HomeyClient;
   }
 }
 
@@ -49,18 +51,15 @@ class TileDashApp {
       
 			// Initialize theme
 			this.initializeTheme();
-			console.log( 'TileDashApp: Theme initialized' );
       
 			// Initialize dashboard (which includes connecting to Homey first)
 			await this.initializeDashboard();
-			console.log( 'TileDashApp: Dashboard initialized' );
-      
+
 			console.log( 'TileDash initialized successfully' );
 
 			// Set orientation and add eventlistener to catch orientation changes
 			document.body.classList.toggle( 'portrait', window.innerHeight > window.innerWidth );
 			window.addEventListener( 'resize', () => {
-				console.log( 'onResize' );
 				document.body.classList.toggle( 'portrait', window.innerHeight > window.innerWidth );
 			} );
 		} catch ( error ) {
@@ -120,7 +119,7 @@ class TileDashApp {
 			}
 
 			// Initialization with HomeyClient
-			this.tileRenderer = new TileRenderer( 'dashboardContainer', this.homeyClient, this.config );
+			this.tileRenderer = new TileRenderer( 'dashboardContainer', this.homeyClient/* , this.config */ );
 		} catch ( error ) {
 			console.error( 'Failed to initialize tile renderer:', error );
 		}
@@ -172,10 +171,23 @@ class TileDashApp {
 
 	private async connectToHomey() {
 		try {
+			// In development, try to reuse existing HomeyClient to avoid rate limits
+			if ( import.meta.env.DEV && window.persistedHomeyClient ) {
+				console.log( '🔄 Reusing existing HomeyClient from previous HMR reload' );
+				this.homeyClient = window.persistedHomeyClient;
+				return true;
+			}
+
 			this.homeyClient = new HomeyClient();
       
 			// Use the new OAuth-based authentication
 			await this.homeyClient.initializeAuth();
+
+			// In development, persist the HomeyClient for HMR
+			if ( import.meta.env.DEV ) {
+				window.persistedHomeyClient = this.homeyClient;
+				console.log( '💾 HomeyClient persisted for HMR reloads' );
+			}
 
 			return true
 		} catch ( error ) {

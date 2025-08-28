@@ -1,5 +1,5 @@
 import { BaseTile } from './BaseTile.js';
-import { AppliancesTile as AppliancesTileConfig, HomeyDevice } from '../types.js';
+import { AppliancesTileConfig as AppliancesTileConfig, HomeyDevice } from '../types.js';
 import { HomeyAPIV3LocalPatched } from 'homey-api';
 
 interface ApplianceDevice {

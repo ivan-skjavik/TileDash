@@ -1,11 +1,12 @@
-import { Tile, DashboardPage, HomeyDevice, SliderTile as SliderTileConfig, SwitchTile as SwitchTileConfig, SensorTile as SensorTileConfig, ButtonTile as ButtonTileConfig, AppliancesTile as AppliancesTileConfig, AppConfig, getTileDeviceIds } from '../types';
+import { Tile, DashboardPage, HomeyDevice, /* SliderTileConfig, SwitchTileConfig, SensorTileConfig, ButtonTileConfig, */ AppliancesTileConfig, EnergyPriceTileConfig, /*  AppConfig, */ getTileDeviceIds } from '../types';
 import { BaseTile } from '../tiles/BaseTile';
-import { SliderTile } from '../tiles/SliderTile';
-import { SwitchTile } from '../tiles/SwitchTile';
-import { SensorTile } from '../tiles/SensorTile';
-import { ButtonTile } from '../tiles/ButtonTile';
+// import { SliderTile } from '../tiles/SliderTile';
+// import { SwitchTile } from '../tiles/SwitchTile';
+// import { SensorTile } from '../tiles/SensorTile';
+// import { ButtonTile } from '../tiles/ButtonTile';
 import { HomeyClient } from '../services/HomeyClient';
 import { AppliancesTile } from '@/tiles/AppliancesTile';
+import { EnergyPriceTile } from '@/tiles/EnergyPriceTile';
 
 export class TileRenderer {
 	private container: HTMLElement | null;
@@ -13,14 +14,15 @@ export class TileRenderer {
 	private tiles: Map<string, BaseTile> = new Map();
 	private currentPageIndex: number = 0;
 	private pages: DashboardPage[] = [];
-	private _config: AppConfig; // Stored for future use
+	// private _config: AppConfig; // Stored for future use
+	private hmr: any = null; // HMR instance reference
 
-	constructor( containerId: string, homeyClient: HomeyClient, config: AppConfig ) {
+	constructor( containerId: string, homeyClient: HomeyClient /* config: AppConfig */ ) {
 		console.log( 'TileRenderer: Constructor called with containerId:', containerId );
 
 		this.container = document.getElementById( containerId );
 		this.homeyClient = homeyClient;
-		this._config = config;
+		// this._config = config;
 
 		if ( !this.container ) {
 			console.error( `TileRenderer: Container with id '${containerId}' not found!` );
@@ -30,6 +32,13 @@ export class TileRenderer {
 
 		// Add keyboard navigation support
 		this.setupKeyboardNavigation();
+	}
+
+	/**
+   * Set HMR instance for tile registration
+   */
+	public setHMR( hmr: any ): void {
+		this.hmr = hmr;
 	}
 
 	/**
@@ -56,7 +65,7 @@ export class TileRenderer {
 	/**
    * Create a tile instance based on type
    */
-	private createTileInstance(
+	public createTileInstance(
 		tileId: string,
 		type: string,
 		config: Tile,
@@ -82,17 +91,19 @@ export class TileRenderer {
 			console.log( `🔧 Creating ${type} tile with ${devices.length} devices:`, requiredDeviceIds );
       
 			switch ( type.toUpperCase() ) {
-				case 'SLIDER':
-					return new SliderTile( tileId, devices, config as SliderTileConfig, element, homeyApi );
-				case 'SWITCH':
-					return new SwitchTile( tileId, devices, config as SwitchTileConfig, element, homeyApi );
-				case 'SENSOR':
-				case 'BINARY_SENSOR':
-					return new SensorTile( tileId, devices, config as SensorTileConfig, element, homeyApi );
-				case 'BUTTON':
-					return new ButtonTile( tileId, devices, config as ButtonTileConfig, element, homeyApi );
+				// case 'SLIDER':
+				// 	return new SliderTile( tileId, devices, config as SliderTileConfig, element, homeyApi );
+				// case 'SWITCH':
+				// 	return new SwitchTile( tileId, devices, config as SwitchTileConfig, element, homeyApi );
+				// case 'SENSOR':
+				// case 'BINARY_SENSOR':
+				// 	return new SensorTile( tileId, devices, config as SensorTileConfig, element, homeyApi );
+				// case 'BUTTON':
+				// 	return new ButtonTile( tileId, devices, config as ButtonTileConfig, element, homeyApi );
 				case 'APPLIANCES':
 					return new AppliancesTile( tileId, devices, config as AppliancesTileConfig, element, homeyApi );
+				case 'ENERGY_PRICE':
+					return new EnergyPriceTile( tileId, devices, config as EnergyPriceTileConfig, element, homeyApi );
 				default:
 					console.warn( `Unknown tile type: ${type}` );
 					return null;
@@ -146,6 +157,11 @@ export class TileRenderer {
 
 		// Register tile
 		this.tiles.set( tileId, tileInstance );
+
+		// Register with HMR if available
+		if ( this.hmr && import.meta.env.DEV ) {
+			this.hmr.registerTile( tileId, config, tileElement, tileInstance );
+		}
 
 		// Render tile content
 		tileInstance.render();

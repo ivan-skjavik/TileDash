@@ -1,4 +1,4 @@
-import { TileFactory } from '@/tiles/TileFactory';
+import { TileFactory } from '@/services/TileFactory';
 import { AppConfig } from './src/types';
 
 export const appConfig: AppConfig = {
@@ -57,7 +57,7 @@ export const appConfig: AppConfig = {
 						},
 						TileFactory.createConfig( 'APPLIANCES', {
 							position: [ 0, 2, ],
-							width: 6,
+							width: 5,
 							height: 2,
 							name: "Kontor Appliances",
 							devices: [
@@ -71,6 +71,16 @@ export const appConfig: AppConfig = {
 								{ deviceId: '56b58d98-3604-42e7-9945-8575d88fd8f3', capabilityId: 'dim', alias: 'taklys_kontor_dim', },
 								{ deviceId: '20dcccf8-3734-4a67-994b-1f6171af177c', capabilityId: 'dim', alias: 'taklys_bad', },
 							],
+						} ),
+						TileFactory.createConfig( 'ENERGY_PRICE', {
+							position: [ 5, 2, ],
+							width: 5,
+							height: 3,
+							tariffCost: 2.95,
+							name: "Strømpris",
+							priceArea: "NO1",
+							refreshInterval: 15,
+							showCurrentPrice: true,
 						} ),
 						// TileFactory.createConfig( 'SLIDER', {
 						// 	position: [ 0, 3, ],

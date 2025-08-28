@@ -153,11 +153,11 @@ export interface DeviceTileData extends BaseTileData {
   multiDeviceMode?: 'synchronized' | 'individual' | 'aggregated';
 }
 
-export interface VirtualTile extends BaseTileData {
+export interface VirtualTileConfig extends BaseTileData {
   type: 'VIRTUAL';
 }
 
-export interface SwitchTile extends DeviceTileData {
+export interface SwitchTileConfig extends DeviceTileData {
   type: 'SWITCH';
   icons?: {
     on: string;
@@ -168,7 +168,7 @@ export interface SwitchTile extends DeviceTileData {
   effectOff?: string;
 }
 
-export interface BinarySensorTile extends DeviceTileData {
+export interface BinarySensorTileConfig extends DeviceTileData {
   type: 'BINARY_SENSOR';
   icons?: {
     on: string;
@@ -178,7 +178,7 @@ export interface BinarySensorTile extends DeviceTileData {
   effectOff?: string;
 }
 
-export interface ButtonTile extends DeviceTileData {
+export interface ButtonTileConfig extends DeviceTileData {
   type: 'BUTTON';
   flowID?: string;
   buttonValue?: any;
@@ -190,7 +190,7 @@ export interface ButtonTile extends DeviceTileData {
   };
 }
 
-export interface SensorTile extends DeviceTileData {
+export interface SensorTileConfig extends DeviceTileData {
   type: 'SENSOR';
   unit: string;
   secondValue?: {
@@ -200,7 +200,7 @@ export interface SensorTile extends DeviceTileData {
   };
 }
 
-export interface SliderTile extends DeviceTileData {
+export interface SliderTileConfig extends DeviceTileData {
   /** Type of the tile, set to 'SLIDER' for slider functionality */
   type: 'SLIDER';
 
@@ -228,7 +228,7 @@ export interface SliderTile extends DeviceTileData {
   unit?: string;
 }
 
-export interface ImageTile extends BaseTileData {
+export interface ImageTileConfig extends BaseTileData {
   type: 'IMAGE';
   id: string;
   folder?: string;
@@ -236,7 +236,7 @@ export interface ImageTile extends BaseTileData {
   timeScroll?: number;
 }
 
-export interface PopupTile extends BaseTileData {
+export interface PopupTileConfig extends BaseTileData {
   type: 'POPUP' | 'VIRTUAL_POPUP';
   id?: string;
   capabilityID?: string;
@@ -251,7 +251,7 @@ export interface PopupTile extends BaseTileData {
   };
 }
 
-export interface HeimdallTile extends DeviceTileData {
+export interface HeimdallTileConfig extends DeviceTileData {
   type: 'HEIMDALL';
   code?: string;
   icons?: {
@@ -261,7 +261,7 @@ export interface HeimdallTile extends DeviceTileData {
   };
 }
 
-export interface ShutterTile extends DeviceTileData {
+export interface ShutterTileConfig extends DeviceTileData {
   type: 'SHUTTER';
   icons?: {
     up: string;
@@ -270,7 +270,7 @@ export interface ShutterTile extends DeviceTileData {
   };
 }
 
-export interface ThermostatTile extends DeviceTileData {
+export interface ThermostatTileConfig extends DeviceTileData {
   type: 'THERMOSTAT';
   onOffCapabilityID: string;
   heatingCapabilityID: string;
@@ -280,7 +280,7 @@ export interface ThermostatTile extends DeviceTileData {
   unit: string;
 }
 
-export interface MediaTile extends DeviceTileData {
+export interface MediaTileConfig extends DeviceTileData {
   type: 'MEDIA';
   homeyIP?: string;
   accountID?: string;
@@ -291,7 +291,7 @@ export interface MediaTile extends DeviceTileData {
   standbyImage?: string;
 }
 
-export interface GaugeTile extends DeviceTileData {
+export interface GaugeTileConfig extends DeviceTileData {
   type: 'GAUGE';
   unit: string;
   maxValue: number;
@@ -307,7 +307,7 @@ export interface GaugeTile extends DeviceTileData {
   };
 }
 
-export interface DoorbirdPopupTile extends DeviceTileData {
+export interface DoorbirdPopupTileConfig extends DeviceTileData {
   type: 'DOORBIRD_POPUP';
   doorbirdIP: string;
   user: string;
@@ -325,7 +325,7 @@ export interface DoorbirdPopupTile extends DeviceTileData {
   testPopup?: boolean;
 }
 
-export interface AppliancesTile extends DeviceTileData {
+export interface AppliancesTileConfig extends DeviceTileData {
   type: 'APPLIANCES';
   /** Maximum number of rows to display (1 or 2) */
   maxRows?: 1 | 2;
@@ -345,22 +345,55 @@ export interface AppliancesTile extends DeviceTileData {
   };
 }
 
+// Norwegian electricity price areas
+export type NorwegianPriceArea = 'NO1' | 'NO2' | 'NO3' | 'NO4' | 'NO5';
+
+export interface EnergyPriceTileConfig extends BaseTileData {
+  type: 'ENERGY_PRICE';
+  /** Norwegian price area (NO1-NO5) */
+  priceArea: NorwegianPriceArea;
+  /** Additional tariff cost in øre/kWh */
+  tariffCost?: number;
+  /** Tax percentage (default 25%) */
+  taxPercentage?: number;
+  /** Refresh interval in minutes */
+  refreshInterval?: number;
+  /** Show current price as separate display */
+  showCurrentPrice?: boolean;
+  /** Graph styling options */
+  graphOptions?: {
+    /** Line color for the price chart */
+    lineColor?: string;
+    /** Fill color under the line */
+    fillColor?: string;
+    /** Color for current hour highlight */
+    currentHourColor?: string;
+    /** Color zones for price levels */
+    priceZones?: {
+      cheap: { color: string; threshold: number };
+      normal: { color: string; threshold: number };
+      expensive: { color: string };
+    };
+  };
+}
+
 export type Tile = 
-  | VirtualTile 
-  | SwitchTile 
-  | BinarySensorTile 
-  | ButtonTile 
-  | SensorTile 
-  | SliderTile 
-  | ImageTile 
-  | PopupTile 
-  | HeimdallTile 
-  | ShutterTile 
-  | ThermostatTile 
-  | MediaTile 
-  | GaugeTile 
-  | DoorbirdPopupTile
-  | AppliancesTile;
+  | VirtualTileConfig 
+  | SwitchTileConfig 
+  | BinarySensorTileConfig 
+  | ButtonTileConfig 
+  | SensorTileConfig 
+  | SliderTileConfig 
+  | ImageTileConfig 
+  | PopupTileConfig 
+  | HeimdallTileConfig 
+  | ShutterTileConfig 
+  | ThermostatTileConfig 
+  | MediaTileConfig 
+  | GaugeTileConfig 
+  | DoorbirdPopupTileConfig
+  | AppliancesTileConfig
+  | EnergyPriceTileConfig;
 
 // Type utilities for tile discrimination and inference
 export type TileType = Tile['type'];
@@ -403,7 +436,7 @@ export function isDeviceTile( tile: Tile ): tile is Tile & DeviceTileData {
 /**
  * Check if tile is virtual (doesn't connect to a device)
  */
-export function isVirtualTile( tile: Tile ): tile is VirtualTile | ImageTile {
+export function isVirtualTile( tile: Tile ): tile is VirtualTileConfig | ImageTileConfig {
 	return tile.type === 'VIRTUAL' || tile.type === 'IMAGE';
 }
 

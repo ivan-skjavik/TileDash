@@ -1,58 +1,10 @@
-import { HomeyDevice, Tile, TileType, TileConfigByType, createTileConfig, isTileOfType, getTileDeviceIds } from '../types';
-import { HomeyAPIV3LocalPatched } from 'homey-api';
-import { BaseTile } from './BaseTile';
-import { SliderTile } from './SliderTile';
-import { SwitchTile } from './SwitchTile';
-import { SensorTile } from './SensorTile';
-import { ButtonTile } from './ButtonTile';
-import { AppliancesTile } from './AppliancesTile';
+import { Tile, TileType, TileConfigByType, createTileConfig, isTileOfType, getTileDeviceIds } from '../types';
+
 
 /**
  * Type-safe tile factory with automatic type inference
  */
-export class TileFactory {
-	/**
-	 * Create a tile instance with full type safety
-	 * TypeScript automatically infers the correct tile class based on config.type
-	 */
-	static createTile(
-		tileId: string,
-		config: Tile,
-		devices: HomeyDevice[], // Now accepts array of devices for multi-device support
-		element: HTMLElement,
-		homeyApi: HomeyAPIV3LocalPatched
-	): BaseTile {
-		// Type guards automatically narrow the config type
-		if ( isTileOfType( config, 'SLIDER' ) ) {
-			// config is now SliderTile - TypeScript knows all properties
-			return new SliderTile( tileId, devices, config, element, homeyApi );
-		}
-		
-		if ( isTileOfType( config, 'SWITCH' ) ) {
-			// config is now SwitchTile
-			return new SwitchTile( tileId, devices, config, element, homeyApi );
-		}
-		
-		if ( isTileOfType( config, 'SENSOR' ) ) {
-			// config is now SensorTile
-			return new SensorTile( tileId, devices, config, element, homeyApi );
-		}
-		
-		if ( isTileOfType( config, 'BUTTON' ) ) {
-			// config is now ButtonTile
-			return new ButtonTile( tileId, devices, config, element, homeyApi );
-		}
-		
-		if ( isTileOfType( config, 'APPLIANCES' ) ) {
-			// config is now AppliancesTile
-			return new AppliancesTile( tileId, devices, config, element, homeyApi );
-		}
-		
-		// Add more tile types here...
-		
-		throw new Error( `Unsupported tile type: ${config.type}` );
-	}
-	
+export class TileFactory {	
 	/**
 	 * Create a type-safe tile configuration
 	 * Usage: TileFactory.createConfig('SLIDER', { ... slider-specific props })
@@ -146,6 +98,22 @@ export class TileFactory {
 			}
 		}
 		
+		if ( isTileOfType( config, 'ENERGY_PRICE' ) ) {
+			// TypeScript knows this is EnergyPriceTile
+			if ( ![ 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', ].includes( config.priceArea ) ) {
+				errors.push( 'Energy price tiles require a valid Norwegian price area (NO1-NO5)' );
+			}
+			if ( config.refreshInterval && ( config.refreshInterval < 5 || config.refreshInterval > 60 ) ) {
+				errors.push( 'Energy price tiles refresh interval must be between 5 and 60 minutes' );
+			}
+			if ( config.tariffCost && config.tariffCost < 0 ) {
+				errors.push( 'Energy price tiles tariff cost cannot be negative' );
+			}
+			if ( config.taxPercentage && ( config.taxPercentage < 0 || config.taxPercentage > 50 ) ) {
+				errors.push( 'Energy price tiles tax percentage must be between 0 and 50%' );
+			}
+		}
+		
 		return {
 			isValid: errors.length === 0,
 			errors,
@@ -198,6 +166,18 @@ export class TileFactory {
 					showNames: true,
 					iconSize: 24,
 					itemSpacing: 8,
+				} as Partial<TileConfigByType<T>>;
+			
+			case 'ENERGY_PRICE':
+				return {
+					...commonDefaults,
+					width: 3,
+					height: 2,
+					priceArea: 'NO1',
+					refreshInterval: 15,
+					showCurrentPrice: true,
+					tariffCost: 0,
+					taxPercentage: 25,
 				} as Partial<TileConfigByType<T>>;
 			
 			case 'VIRTUAL':
@@ -290,12 +270,7 @@ if (!validation.isValid) {
   console.error('Invalid config:', validation.errors);
 }
 
-// Example 4: Create tile instance
-const tileElement = document.createElement('div');
-const homeyDevice = await homeyClient.getDevice('dimmer-123');
-const tile = TileFactory.createTile('tile-1', sliderConfig, homeyDevice, tileElement, homeyApi);
-
-// Example 5: Batch operations
+// Example 4: Batch operations
 const configs = [sliderConfig, switchConfig];
 const requiredDevices = TileFactory.getRequiredDevices(configs);  // ['dimmer-123', 'light-456']
 const groupedTiles = TileFactory.groupTilesByType(configs);       // { SLIDER: [...], SWITCH: [...] }

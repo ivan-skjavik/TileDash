@@ -1,0 +1,166 @@
+// Energy Price Tile Styles
+// .energy-price-tile {
+//   display: flex;
+//   flex-direction: column;
+//   padding: 12px;
+//   background: var(--tile-background, #fff);
+//   border-radius: var(--tile-border-radius, 8px);
+//   border: 1px solid var(--tile-border-color, #e0e0e0);
+//   overflow: hidden;
+  
+//   &.tile--has-error {
+//     border-color: var(--error-color, #f44336);
+//     background: var(--error-background, rgba(244, 67, 54, 0.05));
+    
+//     &::after {
+//       content: "⚠️ Error loading data";
+//       position: absolute;
+//       top: 50%;
+//       left: 50%;
+//       transform: translate(-50%, -50%);
+//       color: var(--error-color, #f44336);
+//       font-size: 12px;
+//       text-align: center;
+//       z-index: 10;
+//     }
+//   }
+// }
+
+.energy-tile-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  gap: 8px;
+}
+
+.energy-tile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.energy-tile-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-color, #333);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.energy-current-price {
+  font-size: 16px;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--secondary-background, rgba(0, 0, 0, 0.05));
+  
+  &.price-cheap {
+    color: var(--success-color, #4caf50);
+    background: var(--success-background, rgba(76, 175, 80, 0.1));
+  }
+  
+  &.price-normal {
+    color: var(--warning-color, #ff9800);
+    background: var(--warning-background, rgba(255, 152, 0, 0.1));
+  }
+  
+  &.price-expensive {
+    color: var(--error-color, #f44336);
+    background: var(--error-background, rgba(244, 67, 54, 0.1));
+  }
+}
+
+.energy-chart-container {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  width: 100%;
+  
+  // ApexCharts specific overrides
+  .apexcharts-canvas {
+    background: transparent !important;
+  }
+  
+  .apexcharts-tooltip {
+    background: var(--tooltip-background, rgba(0, 0, 0, 0.8)) !important;
+    color: var(--tooltip-text, #fff) !important;
+    border: none !important;
+    border-radius: 4px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+  }
+  
+  .apexcharts-tooltip-title {
+    background: transparent !important;
+    border: none !important;
+    color: var(--tooltip-text, #fff) !important;
+    font-weight: 600 !important;
+  }
+  
+  .apexcharts-tooltip-series-group {
+    background: transparent !important;
+  }
+  
+  .apexcharts-tooltip-text {
+    color: var(--tooltip-text, #fff) !important;
+  }
+}
+
+// Dark theme adjustments
+.theme-dark .energy-price-tile {
+  background: var(--tile-background, #2d2d2d);
+  border-color: var(--tile-border-color, #404040);
+  
+  .energy-tile-title {
+    color: var(--text-color, #e0e0e0);
+  }
+  
+  .energy-current-price {
+    background: var(--secondary-background, rgba(255, 255, 255, 0.1));
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .energy-tile-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  
+  .energy-tile-title {
+    text-align: center;
+  }
+  
+  .energy-current-price {
+    text-align: center;
+    font-size: 18px;
+  }
+}
+
+// Animation for loading states
+.energy-price-tile {
+  .energy-chart-container:empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    &::after {
+      content: "Loading chart...";
+      color: var(--text-secondary, #666);
+      font-size: 12px;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
