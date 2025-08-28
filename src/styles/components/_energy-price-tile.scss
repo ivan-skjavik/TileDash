@@ -1,3 +1,5 @@
+@use "sass:color";
+
 // Energy Price Tile Styles
 // .energy-price-tile {
 //   display: flex;
@@ -34,12 +36,12 @@
   gap: 8px;
 }
 
-.energy-tile-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-shrink: 0;
-  gap: 12px;
+.tile {
+  .tile-container {
+    .energy-tile-header {
+      margin-bottom: 0.5rem;
+    }
+  }
 }
 
 .energy-tile-title {
@@ -60,21 +62,26 @@
   padding: 4px 8px;
   border-radius: 4px;
   background: var(--secondary-background, rgba(0, 0, 0, 0.05));
-  
+
   &.price-cheap {
-    color: var(--success-color, #4caf50);
-    background: var(--success-background, rgba(76, 175, 80, 0.1));
+    color: var(--chart-color-cheap);
+    background-color: var(--chart-color-cheap-bg);
   }
   
   &.price-normal {
-    color: var(--warning-color, #ff9800);
-    background: var(--warning-background, rgba(255, 152, 0, 0.1));
+    color: var(--chart-color-normal);
+    background-color: var(--chart-color-normal-bg);
   }
   
   &.price-expensive {
-    color: var(--error-color, #f44336);
-    background: var(--error-background, rgba(244, 67, 54, 0.1));
+    color: var(--chart-color-expensive);
+    background-color: var(--chart-color-expensive-bg);
   }
+
+  
+	--chart-color-normal: #fdcb31;
+	--chart-color-expensive: #e05f09;
+
 }
 
 .energy-chart-container {

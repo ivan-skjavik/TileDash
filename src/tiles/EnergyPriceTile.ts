@@ -3,6 +3,7 @@ import { EnergyPriceTileConfig as EnergyPriceTileConfig, NorwegianPriceArea } fr
 import { HomeyDevice } from '../types';
 import { HomeyAPIV3LocalPatched } from 'homey-api';
 import ApexCharts from 'apexcharts';
+import { TileHMRHelper } from '../utils/TileHMR';
 
 interface EnergyPriceData {
 	ORE_per_kWh: number;
@@ -57,7 +58,7 @@ export class EnergyPriceTile extends BaseTile {
 
 		// Title and current price header
 		const header = document.createElement( 'div' );
-		header.classList.add( 'tile-header' );
+		header.className = 'tile-header energy-tile-header';
 
 		const titleElement = document.createElement( 'div' );
 		titleElement.classList.add( 'tile-title' );
@@ -420,59 +421,7 @@ export class EnergyPriceTile extends BaseTile {
 	}
 }
 
-// Vite HMR Support - Smart instance swapping
+// Hot Module Replacement (HMR) support
 if ( import.meta.hot ) {
-	import.meta.hot.accept( ( newModule ) => {
-		if ( newModule?.EnergyPriceTile ) {
-			console.log( '🔥 EnergyPriceTile class updated, swapping instances...' );
-			swapEnergyPriceTileInstances( newModule.EnergyPriceTile );
-		}
-	} );
-}
-
-function swapEnergyPriceTileInstances( NewEnergyPriceTile: typeof EnergyPriceTile ) {
-	const tileRenderer = ( window as any ).TileDashApp?.tileRenderer;
-	if ( !tileRenderer ) {
-		console.warn( 'TileRenderer not available for HMR' );
-		return;
-	}
-
-	// Access the tiles map through the public getter
-	const tilesMap = tileRenderer.tilesMap as Map<string, BaseTile>;
-	const instancesToSwap: Array<{ id: string; oldInstance: BaseTile }> = [];
-
-	// Find all EnergyPriceTile instances
-	tilesMap.forEach( ( instance, id ) => {
-		if ( instance instanceof EnergyPriceTile ) {
-			instancesToSwap.push( { id, oldInstance: instance, } );
-		}
-	} );
-
-	console.log( `🔄 Found ${instancesToSwap.length} EnergyPriceTile instances to swap` );
-
-	instancesToSwap.forEach( ( { id, oldInstance, } ) => {
-		try {
-			// Get instance data
-			const element = oldInstance.tileElement;
-			const config = oldInstance.tileConfig;
-			const devices = oldInstance.tileDevices;
-			const homeyApi = oldInstance.api;
-
-			// Clean up old instance
-			oldInstance.cleanup();
-
-			// Create new instance with updated class
-			const newInstance = new NewEnergyPriceTile( id, devices, config as any, element, homeyApi );
-
-			// Update registry
-			tilesMap.set( id, newInstance );
-
-			// Render new instance
-			newInstance.render();
-
-			console.log( `✅ Successfully swapped EnergyPriceTile instance: ${id}` );
-		} catch ( error ) {
-			console.error( `❌ Failed to swap EnergyPriceTile instance ${id}:`, error );
-		}
-	} );
+	import.meta.hot.accept( TileHMRHelper.create( EnergyPriceTile, 'EnergyPriceTile' ) );
 }

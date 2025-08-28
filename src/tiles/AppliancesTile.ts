@@ -1,6 +1,7 @@
 import { BaseTile } from './BaseTile.js';
 import { AppliancesTileConfig as AppliancesTileConfig, HomeyDevice } from '../types.js';
 import { HomeyAPIV3LocalPatched } from 'homey-api';
+import { TileHMRHelper } from '../utils/TileHMR.js';
 
 interface ApplianceDevice {
 	id: string;
@@ -277,7 +278,7 @@ export class AppliancesTile extends BaseTile {
 		
 		const title = document.createElement( 'span' );
 		title.className = 'tile-title';
-		title.textContent = this.config.name || 'Appliances';
+		title.textContent = this.config.name || 'Appliances 🏠';
 		
 		const subtitle = document.createElement( 'p' );
 		subtitle.className = 'tile-header-side';
@@ -367,4 +368,9 @@ export class AppliancesTile extends BaseTile {
 			timeout = setTimeout( () => func.apply( this, args ), wait );
 		} ) as T;
 	}
+}
+
+// Hot Module Replacement (HMR) support
+if ( import.meta.hot ) {
+	import.meta.hot.accept( TileHMRHelper.create( AppliancesTile, 'AppliancesTile' ) );
 }
