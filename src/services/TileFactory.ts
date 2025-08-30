@@ -139,6 +139,18 @@ export class TileFactory {
 					showCounter: false,
 				} as any;
 			
+			case 'LIVE_CAMERA_FEED':
+				return {
+					...commonDefaults,
+					width: 3,
+					height: 3,
+					cameras: [],
+					showCameraButtons: true,
+					showNoneButton: true,
+					autoStart: true,
+					objectFit: 'cover',
+				} as any;
+			
 			case 'VIRTUAL':
 				return {
 					...commonDefaults,

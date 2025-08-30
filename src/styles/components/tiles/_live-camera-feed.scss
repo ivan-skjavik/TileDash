@@ -1,0 +1,228 @@
+/* Live Camera Feed Tile */
+
+/* ===== TILE STRUCTURE ===== */
+.live-camera-feed-tile {
+	height: 100%;
+	
+	.tile-container {
+		height: 100%;
+		gap: 8px;
+	}
+}
+
+/* ===== HEADER WITH CAMERA BUTTONS ===== */
+.camera-tile-header {
+	flex-direction: column;
+	align-items: stretch;
+	gap: 8px;
+	margin-bottom: 8px;
+
+	.tile-title {
+		text-align: center;
+	}
+}
+
+/* ===== CAMERA BUTTON GROUP ===== */
+.camera-button-group {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	justify-content: center;
+	align-items: center;
+}
+
+.camera-button {
+	padding: 4px 8px;
+	font-size: 0.7rem;
+	font-weight: 500;
+	border: 1px solid var(--tile-border, #ddd);
+	border-radius: 4px;
+	background: var(--tile-button-background, var(--tile-background));
+	color: var(--tile-text-color, #333);
+	cursor: pointer;
+	transition: all 0.2s ease;
+	white-space: nowrap;
+	min-width: 0;
+	flex-shrink: 0;
+
+	&:hover {
+		background: var(--tile-button-hover-background, var(--app-color-secondary, #f0f0f0));
+		border-color: var(--app-color-primary, #2196F3);
+	}
+
+	&:active {
+		transform: scale(0.95);
+	}
+
+	&.active {
+		background: var(--app-color-primary, #2196F3);
+		color: var(--tile-button-active-color, #fff);
+		border-color: var(--app-color-primary, #2196F3);
+	}
+
+	&.none-button {
+		background: var(--tile-button-none-background, #f44336);
+		color: var(--tile-button-none-color, #fff);
+		border-color: var(--tile-button-none-border, #f44336);
+
+		&:hover {
+			background: var(--tile-button-none-hover, #d32f2f);
+		}
+
+		&.active {
+			background: var(--tile-button-none-active, #b71c1c);
+		}
+	}
+}
+
+/* ===== VIDEO CONTAINER ===== */
+.camera-video-container {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	border-radius: 8px;
+	background: var(--tile-video-background, #000);
+	position: relative;
+	min-height: 0;
+}
+
+.camera-video {
+	width: 100%;
+	height: 100%;
+	display: block;
+	border-radius: 8px;
+}
+
+/* ===== ERROR CONTAINER ===== */
+.camera-error-container {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	background: var(--tile-error-background, rgba(244, 67, 54, 0.9));
+	color: var(--tile-error-color, #fff);
+	padding: 12px 16px;
+	border-radius: 8px;
+	font-size: 0.8rem;
+	text-align: center;
+	max-width: 90%;
+	backdrop-filter: blur(4px);
+
+	&.hidden {
+		display: none;
+	}
+}
+
+/* ===== LOADING STATE ===== */
+.live-camera-feed-tile.tile--loading {
+	.camera-video-container::after {
+		content: '';
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: 32px;
+		height: 32px;
+		border: 3px solid var(--tile-icon-color, #999);
+		border-top: 3px solid var(--tile-value-color, var(--app-color-primary, #2196F3));
+		border-radius: 50%;
+		animation: tile-spin 1s linear infinite;
+		z-index: 10;
+	}
+
+	.camera-button-group {
+		pointer-events: none;
+		opacity: 0.6;
+	}
+}
+
+/* ===== ERROR STATE ===== */
+.live-camera-feed-tile.tile--has-error {
+	.camera-button-group {
+		opacity: 0.8;
+	}
+}
+
+/* ===== RESPONSIVE ADJUSTMENTS ===== */
+@media (max-width: 768px) {
+	.camera-button-group {
+		gap: 3px;
+	}
+	
+	.camera-button {
+		padding: 3px 6px;
+		font-size: 0.65rem;
+		min-width: 32px;
+	}
+	
+	.camera-tile-header {
+		gap: 6px;
+		margin-bottom: 6px;
+	}
+	
+	.camera-error-container {
+		font-size: 0.75rem;
+		padding: 8px 12px;
+	}
+}
+
+/* ===== COMPACT TILE ADJUSTMENTS ===== */
+.live-camera-feed-tile[data-width="1"] {
+	.camera-button-group {
+		flex-direction: column;
+		gap: 2px;
+	}
+	
+	.camera-button {
+		font-size: 0.6rem;
+		padding: 2px 4px;
+		width: 100%;
+	}
+}
+
+.live-camera-feed-tile[data-height="1"] {
+	.camera-tile-header {
+		margin-bottom: 4px;
+		
+		.tile-title {
+			font-size: 0.7rem;
+		}
+	}
+	
+	.camera-button {
+		padding: 2px 6px;
+		font-size: 0.6rem;
+	}
+}
+
+/* ===== THEME INTEGRATION ===== */
+.live-camera-feed-tile {
+	/* Inherit tile background and borders */
+	.camera-video-container {
+		border: 1px solid var(--tile-border, rgba(42, 49, 56, 0.25));
+	}
+	
+	/* Button theming follows tile patterns */
+	.camera-button {
+		box-shadow: var(--tile-button-shadow, 0 1px 3px rgba(0,0,0,0.1));
+		
+		&:focus {
+			outline: 2px solid var(--app-color-primary, #2196F3);
+			outline-offset: 1px;
+		}
+	}
+}
+
+/* ===== NO CAMERAS STATE ===== */
+.live-camera-feed-tile .tile-error {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	color: var(--tile-error-color, #f44336);
+	font-size: 0.9rem;
+	text-align: center;
+	padding: 16px;
+}

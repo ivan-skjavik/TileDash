@@ -393,6 +393,33 @@ export interface ImageCarouselTileConfig extends BaseTileData {
   showCounter?: boolean;
 }
 
+export interface CameraStream {
+  /** Camera identifier/title */
+  title: string;
+  /** RTSP stream URL */
+  rtspUrl: string;
+  /** Username for authentication */
+  username?: string;
+  /** Password for authentication */
+  password?: string;
+}
+
+export interface LiveCameraFeedTileConfig extends BaseTileData {
+  type: 'LIVE_CAMERA_FEED';
+  /** Array of camera streams to display */
+  cameras: CameraStream[];
+  /** Show camera selection buttons in header (default: true) */
+  showCameraButtons?: boolean;
+  /** Include "None" button to disable streaming (default: true) */
+  showNoneButton?: boolean;
+  /** Auto-start with first camera (default: true) */
+  autoStart?: boolean;
+  /** How the video should be fitted within the tile (default: 'cover') */
+  objectFit?: 'cover' | 'contain' | 'fill';
+  /** Stream quality preset for RTSP conversion (default: 'medium') */
+  quality?: 'low' | 'medium' | 'high' | 'ultra';
+}
+
 export type Tile = 
   | VirtualTileConfig 
   | SwitchTileConfig 
@@ -410,7 +437,8 @@ export type Tile =
   | DoorbirdPopupTileConfig
   | AppliancesTileConfig
   | EnergyPriceTileConfig
-  | ImageCarouselTileConfig;
+  | ImageCarouselTileConfig
+  | LiveCameraFeedTileConfig;
 
 // Type utilities for tile discrimination and inference
 export type TileType = Tile['type'];
@@ -453,8 +481,8 @@ export function isDeviceTile( tile: Tile ): tile is Tile & DeviceTileData {
 /**
  * Check if tile is virtual (doesn't connect to a device)
  */
-export function isVirtualTile( tile: Tile ): tile is VirtualTileConfig | ImageTileConfig | ImageCarouselTileConfig {
-	return tile.type === 'VIRTUAL' || tile.type === 'IMAGE' || tile.type === 'IMAGE_CAROUSEL';
+export function isVirtualTile( tile: Tile ): tile is VirtualTileConfig | ImageTileConfig | ImageCarouselTileConfig | LiveCameraFeedTileConfig {
+	return tile.type === 'VIRTUAL' || tile.type === 'IMAGE' || tile.type === 'IMAGE_CAROUSEL' || tile.type === 'LIVE_CAMERA_FEED';
 }
 
 /**

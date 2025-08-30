@@ -100,6 +100,36 @@ export const appConfig: AppConfig = {
 							// showDots: true,
 							// showCounter: true,
 						} ),
+						TileFactory.createConfig( 'LIVE_CAMERA_FEED', {
+							position: [ 5, 0, ],
+							width: 4,
+							height: 3,
+							name: "Security Cameras",
+							cameras: [
+								{
+									title: "Stue",
+									rtspUrl: "rtsp://10.0.0.221:554/stream1",
+									username: "admin-ivan",
+									password: "xatcok-sactu7-kudhyT",
+								},
+								{
+									title: "Hvor",
+									rtspUrl: "rtsp://10.0.0.222:554/stream1",
+									username: "admin-ivan",
+									password: "xatcok-sactu7-kudhyT",
+								},
+								{
+									title: "Garage",
+									rtspUrl: "rtsp://10.0.0.223:554/stream1",
+									username: "admin-ivan",
+									password: "xatcok-sactu7-kudhyT",
+								},
+							],
+							showCameraButtons: true,
+							showNoneButton: true,
+							autoStart: false,
+							objectFit: 'cover',
+						} ),
 						// TileFactory.createConfig( 'SLIDER', {
 						// 	position: [ 0, 3, ],
 						// 	id: "56b58d98-3604-42e7-9945-8575d88fd8f3",
