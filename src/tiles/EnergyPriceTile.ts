@@ -18,7 +18,8 @@ interface EnergyPriceResponse extends Array<EnergyPriceData> {}
 
 export class EnergyPriceTile extends BaseTile {
 	private chart: ApexCharts | null = null;
-	private refreshTimer: number | null = null;
+	private dataRefreshTimer: number | null = null;
+	private uiUpdateTimer: number | null = null;
 	private currentPriceElement: HTMLElement | null = null;
 	private chartContainer: HTMLElement | null = null;
 	private priceData: EnergyPriceData[] = [];
@@ -84,16 +85,14 @@ export class EnergyPriceTile extends BaseTile {
 
 		// Load data and setup chart (non-blocking)
 		this.fetchAndUpdateData();
-		this.setupRefreshTimer();
+		this.setupSmartRefreshTimers();
 	}
 
 	private async fetchAndUpdateData(): Promise<void> {
 		try {
-			// Don't refetch if we have recent data (within refresh interval)
-			const refreshInterval = ( this.energyConfig.refreshInterval || 15 ) * 60 * 1000; // Convert to ms
-			const now = Date.now();
-			
-			if ( this.lastDataFetch && ( now - this.lastDataFetch ) < refreshInterval ) {
+			// Check minimum refresh interval to avoid API spam
+			if ( !this.shouldFetchData() ) {
+				console.log( `⏭️ Skipping data fetch - minimum refresh interval not reached` );
 				return;
 			}
 
@@ -129,7 +128,7 @@ export class EnergyPriceTile extends BaseTile {
 
 			this.updateChart();
 			this.updateCurrentPrice();
-			this.lastDataFetch = now;
+			this.lastDataFetch = Date.now();
 
 			console.log( `✅ Energy price data updated for ${this.energyConfig.priceArea} (${this.PRICE_AREA_NAMES[this.energyConfig.priceArea]})` );
 
@@ -223,7 +222,7 @@ export class EnergyPriceTile extends BaseTile {
 
 		// Get current hour for highlighting (in local timezone)
 		const now = new Date();
-		const currentHour = new Date( now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() );
+		const currentHour = new Date( now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes() );
 		const currentHourTime = currentHour.getTime();
 
 		const nearestFutureMidnight = new Date( currentHour );
@@ -407,30 +406,143 @@ export class EnergyPriceTile extends BaseTile {
 		}
 	}
 
-	private setupRefreshTimer(): void {
-		if ( this.refreshTimer ) {
-			clearInterval( this.refreshTimer );
+	private calculateNextDataRefreshTime(): number {
+		const now = new Date();
+		const today1310 = new Date( now.getFullYear(), now.getMonth(), now.getDate(), 13, 10, 0 );
+		const tomorrow1310 = new Date( today1310.getTime() + 24 * 60 * 60 * 1000 );
+		
+		// If it's past 13:10 today, schedule for tomorrow at 13:10
+		if ( now >= today1310 ) {
+			return tomorrow1310.getTime() - now.getTime();
+		} else {
+			// If it's before 13:10 today, schedule for today at 13:10
+			return today1310.getTime() - now.getTime();
+		}
+	}
+
+	private getMinimumRefreshInterval(): number {
+		// Minimum 30 minutes to avoid spamming the API
+		const configuredInterval = ( this.energyConfig.refreshInterval || 30 ) * 60 * 1000;
+		const minimumInterval = 30 * 60 * 1000; // 30 minutes
+		return Math.max( configuredInterval, minimumInterval );
+	}
+
+	private shouldFetchData(): boolean {
+		if ( !this.lastDataFetch ) return true;
+		
+		const now = Date.now();
+		const timeSinceLastFetch = now - this.lastDataFetch;
+		const minimumInterval = this.getMinimumRefreshInterval();
+		
+		return timeSinceLastFetch >= minimumInterval;
+	}
+
+	private setupSmartRefreshTimers(): void {
+		// Clear any existing timers
+		if ( this.dataRefreshTimer ) {
+			clearTimeout( this.dataRefreshTimer );
+		}
+		if ( this.uiUpdateTimer ) {
+			clearInterval( this.uiUpdateTimer );
 		}
 
-		const interval = ( this.energyConfig.refreshInterval || 15 ) * 60 * 1000; // Convert to milliseconds
-		this.refreshTimer = window.setInterval( () => {
-			this.fetchAndUpdateData();
-		}, interval );
+		// Setup data refresh timer (smart timing for tomorrow's data)
+		this.scheduleNextDataRefresh();
 
-		console.log( `🔄 Energy price refresh timer set to ${this.energyConfig.refreshInterval || 15} minutes` );
+		// Setup UI update timer (every minute for "now" annotation and current price)
+		this.uiUpdateTimer = window.setInterval( () => {
+			this.updateChartAnnotations();
+			this.updateCurrentPrice();
+		}, 60 * 1000 ); // Every minute
+
+		console.log( `🔄 Smart refresh timers initialized - UI updates every minute, data refresh scheduled intelligently` );
+	}
+
+	private scheduleNextDataRefresh(): void {
+		const timeToNextRefresh = this.calculateNextDataRefreshTime();
+		
+		this.dataRefreshTimer = window.setTimeout( async () => {
+			console.log( `⏰ Scheduled data refresh triggered at ${new Date().toLocaleTimeString()}` );
+			
+			if ( this.shouldFetchData() ) {
+				await this.fetchAndUpdateData();
+			} else {
+				console.log( `⏭️ Skipping data fetch (too soon since last update)` );
+			}
+			
+			// Schedule the next refresh (will be tomorrow at 13:10)
+			this.scheduleNextDataRefresh();
+		}, timeToNextRefresh );
+
+		const nextRefreshTime = new Date( Date.now() + timeToNextRefresh );
+		console.log( `📅 Next data refresh scheduled for: ${nextRefreshTime.toLocaleString()}` );
+	}
+
+	private updateChartAnnotations(): void {
+		if ( !this.chart ) return;
+
+		// Get current hour for highlighting (in local timezone)
+		const now = new Date();
+		const currentHour = new Date( now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes() );
+		const currentHourTime = currentHour.getTime();
+
+		const nearestFutureMidnight = new Date( currentHour );
+		nearestFutureMidnight.setHours( 24, 0, 0, 0 );
+
+		// Update chart annotations
+		this.chart.updateOptions( {
+			annotations: {
+				xaxis: [
+					{
+						x: currentHourTime,
+						strokeDashArray: 3,
+						borderColor: this.energyConfig.graphOptions?.currentHourColor || 'var(--app-color-primary, #ff9800)',
+						label: {
+							text: 'Now',
+							style: {
+								color: 'var(--text-color, #333)',
+								background: this.energyConfig.graphOptions?.currentHourColor || 'var(--app-color-primary, #ff9800)',
+							},
+						},
+					},
+					{
+						x: nearestFutureMidnight.getTime(),
+						strokeDashArray: 5,
+						borderColor: 'var(--app-color-secondary, lightgrey)',
+					},
+				] as any,
+			},
+		}, false, false ); // Don't redraw, don't animate
 	}
 
 	update(): void {
 		// Energy price tiles don't have device updates
-		// Data updates are handled by the refresh timer
+		// Data updates are handled by the smart refresh timers
+	}
+
+	/**
+	 * Manually trigger a data refresh (respects minimum interval)
+	 */
+	public async refreshData( force: boolean = false ): Promise<void> {
+		if ( force || this.shouldFetchData() ) {
+			await this.fetchAndUpdateData();
+		} else {
+			const nextAllowedRefresh = new Date( this.lastDataFetch + this.getMinimumRefreshInterval() );
+			console.log( `⏭️ Manual refresh blocked - next refresh allowed at: ${nextAllowedRefresh.toLocaleTimeString()}` );
+		}
 	}
 
 	public cleanup(): void {
 		super.cleanup();
 		
-		if ( this.refreshTimer ) {
-			clearInterval( this.refreshTimer );
-			this.refreshTimer = null;
+		if ( this.dataRefreshTimer ) {
+			clearTimeout( this.dataRefreshTimer );
+			this.dataRefreshTimer = null;
+		}
+		
+		if ( this.uiUpdateTimer ) {
+			clearInterval( this.uiUpdateTimer );
+			this.uiUpdateTimer = null;
 		}
 		
 		if ( this.chart ) {
