@@ -171,16 +171,6 @@ protected formatValue( value: any, capability?: any ): string {
 	return String( value );
 }
 
-protected showClickFeedback(): void {
-	this.element.style.transform = 'scale(0.95)';
-	this.element.style.opacity = '0.7';
-
-	setTimeout( () => {
-		this.element.style.transform = 'scale(1)';
-		this.element.style.opacity = '1';
-	}, 150 );
-}
-
 protected getCapabilityValue( deviceId: string, capabilityId: string ): any {
 	const device = this.deviceMap.get( deviceId );
 	if ( !device || !capabilityId ) return undefined;

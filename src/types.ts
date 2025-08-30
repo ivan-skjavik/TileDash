@@ -377,6 +377,22 @@ export interface EnergyPriceTileConfig extends BaseTileData {
   };
 }
 
+export interface ImageCarouselTileConfig extends BaseTileData {
+  type: 'IMAGE_CAROUSEL';
+  /** Array of image URLs or paths to display */
+  images: string[];
+  /** Interval in seconds to automatically advance to next image (default: 5) */
+  interval?: number;
+  /** Whether to auto-advance images (default: true) */
+  autoAdvance?: boolean;
+  /** How the image should be fitted within the tile (default: 'cover') */
+  objectFit?: 'cover' | 'contain' | 'fill' | 'scale-down';
+  /** Show navigation dots indicator */
+  showDots?: boolean;
+  /** Show current image index (e.g., "2/5") */
+  showCounter?: boolean;
+}
+
 export type Tile = 
   | VirtualTileConfig 
   | SwitchTileConfig 
@@ -393,7 +409,8 @@ export type Tile =
   | GaugeTileConfig 
   | DoorbirdPopupTileConfig
   | AppliancesTileConfig
-  | EnergyPriceTileConfig;
+  | EnergyPriceTileConfig
+  | ImageCarouselTileConfig;
 
 // Type utilities for tile discrimination and inference
 export type TileType = Tile['type'];
@@ -436,8 +453,8 @@ export function isDeviceTile( tile: Tile ): tile is Tile & DeviceTileData {
 /**
  * Check if tile is virtual (doesn't connect to a device)
  */
-export function isVirtualTile( tile: Tile ): tile is VirtualTileConfig | ImageTileConfig {
-	return tile.type === 'VIRTUAL' || tile.type === 'IMAGE';
+export function isVirtualTile( tile: Tile ): tile is VirtualTileConfig | ImageTileConfig | ImageCarouselTileConfig {
+	return tile.type === 'VIRTUAL' || tile.type === 'IMAGE' || tile.type === 'IMAGE_CAROUSEL';
 }
 
 /**

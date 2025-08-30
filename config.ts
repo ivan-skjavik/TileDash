@@ -56,7 +56,7 @@ export const appConfig: AppConfig = {
 							id: "tile-image-1", // Define which id you want but use a different id for each IMAGE type in your dashboard
 						},
 						TileFactory.createConfig( 'APPLIANCES', {
-							position: [ 0, 2, ],
+							position: [ 5, 4, ],
 							width: 5,
 							height: 2,
 							name: "Kontor Appliances",
@@ -73,7 +73,7 @@ export const appConfig: AppConfig = {
 							],
 						} ),
 						TileFactory.createConfig( 'ENERGY_PRICE', {
-							position: [ 5, 2, ],
+							position: [ 0, 4, ],
 							width: 5,
 							height: 3,
 							tariffCost: 2.95,
@@ -81,6 +81,24 @@ export const appConfig: AppConfig = {
 							priceArea: "NO1",
 							refreshInterval: 15,
 							showCurrentPrice: true,
+						} ),
+						TileFactory.createConfig( 'IMAGE_CAROUSEL', {
+							position: [ 0, 0, ],
+							width: 5,
+							height: 4,
+							name: "Gallery demo",
+							images: [
+								"./img/Landscape/1.jpg",
+								"./img/Landscape/2.jpg", 
+								"./img/Landscape/3.jpg",
+								"./img/Landscape/4.jpg",
+								"./img/Landscape/5.jpg",
+							],
+							interval: 10,
+							autoAdvance: true,
+							objectFit: 'cover',
+							// showDots: true,
+							// showCounter: true,
 						} ),
 						// TileFactory.createConfig( 'SLIDER', {
 						// 	position: [ 0, 3, ],

@@ -7,7 +7,8 @@
 /* App structure and layout (theme-independent) */
 @use 'app';
 
-/* Import Appliances Tile */
+/* Import Tile Components */
 @use './components/tiles/appliances';
+@use './components/tiles/image-carousel';
 @use './components/energy-price-tile';
 @use './shoelace-override';

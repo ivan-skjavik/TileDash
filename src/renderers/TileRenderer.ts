@@ -1,4 +1,4 @@
-import { Tile, DashboardPage, HomeyDevice, /* SliderTileConfig, SwitchTileConfig, SensorTileConfig, ButtonTileConfig, */ AppliancesTileConfig, EnergyPriceTileConfig, /*  AppConfig, */ getTileDeviceIds } from '../types';
+import { Tile, DashboardPage, HomeyDevice, /* SliderTileConfig, SwitchTileConfig, SensorTileConfig, ButtonTileConfig, */ AppliancesTileConfig, EnergyPriceTileConfig, ImageCarouselTileConfig, /*  AppConfig, */ getTileDeviceIds } from '../types';
 import { BaseTile } from '../tiles/BaseTile';
 // import { SliderTile } from '../tiles/SliderTile';
 // import { SwitchTile } from '../tiles/SwitchTile';
@@ -7,6 +7,7 @@ import { BaseTile } from '../tiles/BaseTile';
 import { HomeyClient } from '../services/HomeyClient';
 import { AppliancesTile } from '@/tiles/AppliancesTile';
 import { EnergyPriceTile } from '@/tiles/EnergyPriceTile';
+import { ImageCarouselTile } from '@/tiles/ImageCarouselTile';
 
 export class TileRenderer {
 	private container: HTMLElement | null;
@@ -96,6 +97,8 @@ export class TileRenderer {
 					return new AppliancesTile( tileId, devices, config as AppliancesTileConfig, element, homeyApi );
 				case 'ENERGY_PRICE':
 					return new EnergyPriceTile( tileId, devices, config as EnergyPriceTileConfig, element, homeyApi );
+				case 'IMAGE_CAROUSEL':
+					return new ImageCarouselTile( tileId, devices, config as ImageCarouselTileConfig, element, homeyApi );
 				default:
 					console.warn( `Unknown tile type: ${type}` );
 					return null;

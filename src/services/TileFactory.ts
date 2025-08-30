@@ -126,6 +126,19 @@ export class TileFactory {
 					taxPercentage: 25,
 				} as Partial<TileConfigByType<T>>;
 			
+			case 'IMAGE_CAROUSEL':
+				return {
+					...commonDefaults,
+					width: 2,
+					height: 2,
+					images: [],
+					interval: 5,
+					autoAdvance: true,
+					objectFit: 'cover',
+					showDots: true,
+					showCounter: false,
+				} as any;
+			
 			case 'VIRTUAL':
 				return {
 					...commonDefaults,

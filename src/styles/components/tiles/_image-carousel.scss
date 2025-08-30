@@ -1,0 +1,142 @@
+/* Image Carousel Tile */
+
+/* ===== TILE STRUCTURE ===== */
+.image-carousel-tile {
+	height: 100%;
+	
+	.tile-container {
+		height: 100%;
+		// gap: 8px;
+	}
+}
+
+/* ===== IMAGE CONTAINER ===== */
+.image-carousel-container {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	border-radius: var(--tile-radius, 12px);
+	background: var(--tile-image-background, #f5f5f5);
+	cursor: pointer;
+	transition: transform 0.1s ease;
+	position: relative;
+
+	&:hover {
+		transform: scale(0.98);
+	}
+
+	&:active {
+		transform: scale(0.95);
+	}
+}
+
+.image-carousel-image {
+	width: 100%;
+	height: 100%;
+	display: block;
+	transition: opacity 0.3s ease;
+}
+
+/* ===== INDICATORS ===== */
+.image-carousel-indicators {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	padding: 0 8px;
+    padding-top: 3px;
+	min-height: 12px;
+}
+
+/* ===== DOTS NAVIGATION ===== */
+.image-carousel-dots {
+	display: flex;
+	gap: 6px;
+	align-items: center;
+}
+
+.image-carousel-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--tile-icon-color, #999);
+	opacity: 0.4;
+	cursor: pointer;
+	transition: all 0.2s ease;
+
+	&:hover {
+		opacity: 0.7;
+		transform: scale(1.2);
+	}
+
+	&.active {
+		opacity: 1;
+		background: var(--tile-value-color, var(--app-color-primary, #2196F3));
+		transform: scale(1.3);
+	}
+}
+
+/* ===== COUNTER ===== */
+.image-carousel-counter {
+	font-size: 0.75rem;
+	color: var(--tile-text-color, #666);
+	font-weight: 500;
+	padding: 0px 8px;
+	border-radius: 12px;
+	background: var(--tile-indicator-background, rgba(0, 0, 0, 0.1));
+	backdrop-filter: blur(4px);
+}
+
+/* ===== ERROR STATE ===== */
+.image-carousel-tile.tile--has-error {
+	.tile-error {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		height: 100%;
+		color: var(--tile-error-color, #f44336);
+		font-size: 0.9rem;
+		text-align: center;
+	}
+}
+
+/* ===== RESPONSIVE ADJUSTMENTS ===== */
+@media (max-width: 768px) {
+	.image-carousel-dots {
+		gap: 4px;
+	}
+	
+	.image-carousel-dot {
+		width: 6px;
+		height: 6px;
+	}
+	
+	.image-carousel-counter {
+		font-size: 0.7rem;
+		padding: 2px 6px;
+	}
+}
+
+/* ===== LOADING STATE ===== */
+.image-carousel-tile.tile--loading {
+	.image-carousel-container {
+		opacity: 0.6;
+		pointer-events: none;
+		
+		&::after {
+			content: '';
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			width: 24px;
+			height: 24px;
+			border: 2px solid var(--tile-icon-color, #999);
+			border-top: 2px solid var(--tile-value-color, var(--app-color-primary, #2196F3));
+			border-radius: 50%;
+			animation: tile-spin 1s linear infinite;
+		}
+	}
+}
