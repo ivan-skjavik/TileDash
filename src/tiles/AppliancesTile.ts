@@ -2,6 +2,7 @@ import { BaseTile } from './BaseTile.js';
 import { AppliancesTileConfig as AppliancesTileConfig, HomeyDevice } from '../types.js';
 import { HomeyAPIV3LocalPatched } from 'homey-api';
 import { TileHMRHelper } from '../utils/TileHMR.js';
+import { SlRange, SlSwitch } from '@shoelace-style/shoelace';
 
 interface ApplianceDevice {
 	id: string;
@@ -327,10 +328,8 @@ export class AppliancesTile extends BaseTile {
 		console.log( `🔄 updateShoelaceToggleUI: ${deviceId} = ${value}` );
 		
 		if ( controlElement ) {
-			const switchElement = controlElement.querySelector( 'sl-switch' );
-			if ( switchElement ) {
-				switchElement.checked = value;
-			}
+			( controlElement as SlSwitch ).checked = value;
+
 			controlElement.classList.toggle( 'control-item--active', value );
 		} else {
 			console.warn( `Control element not found for key: ${controlKey}` );
@@ -343,10 +342,7 @@ export class AppliancesTile extends BaseTile {
 		console.log( `🔄 updateShoelaceSliderUI: ${deviceId} = ${value}` );
 		
 		if ( controlElement ) {
-			const rangeElement = controlElement.querySelector( 'sl-range' );
-			if ( rangeElement ) {
-				rangeElement.value = Math.round( value * 100 );
-			}
+			( controlElement as SlRange ).value = Math.round( value * 100 );
 			
 			const device = this.deviceMap.get( deviceId );
 			const isOn = device?.capabilitiesObj?.onoff?.value ?? false;
