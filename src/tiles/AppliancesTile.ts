@@ -16,7 +16,10 @@ export class AppliancesTile extends BaseTile {
 	private rightColumn: HTMLElement;
 	private nonDimmableDevices: ApplianceDevice[] = [];
 	private dimmableDevices: ApplianceDevice[] = [];
-	private controlElements: Map<string, HTMLElement> = new Map();
+	// Changed to store arrays of control elements per device-capability combination
+	private controlElements: Map<string, HTMLElement[]> = new Map();
+	// Store percentage labels separately for dimmer controls
+	private percentageLabels: Map<string, HTMLElement[]> = new Map();
 	
 	// Debounced update functions to prevent rapid API calls
 	private debouncedToggleUpdate = this.debounce( this.updateToggleDevice.bind( this ), 300 );
@@ -85,7 +88,12 @@ export class AppliancesTile extends BaseTile {
 		this.nonDimmableDevices.forEach( appliance => {
 			const controlElement = this.createShoelaceToggleControl( appliance );
 			const controlKey = `${appliance.id}-onoff`;
-			this.controlElements.set( controlKey, controlElement[1] );
+			
+			// Add to array of control elements for this device-capability
+			if ( !this.controlElements.has( controlKey ) ) {
+				this.controlElements.set( controlKey, [] );
+			}
+			this.controlElements.get( controlKey )!.push( controlElement[1] );
 
 			this.leftColumn.appendChild( controlElement[0] );
 			this.leftColumn.appendChild( controlElement[1] );
@@ -97,7 +105,18 @@ export class AppliancesTile extends BaseTile {
 		this.dimmableDevices.forEach( appliance => {
 			const controlElement = this.createShoelaceDimmerControl( appliance );
 			const controlKey = `${appliance.id}-dim`;
-			this.controlElements.set( controlKey, controlElement[1] );
+			
+			// Add to array of control elements for this device-capability
+			if ( !this.controlElements.has( controlKey ) ) {
+				this.controlElements.set( controlKey, [] );
+			}
+			this.controlElements.get( controlKey )!.push( controlElement[1] );
+
+			// Also store the percentage label separately
+			if ( !this.percentageLabels.has( controlKey ) ) {
+				this.percentageLabels.set( controlKey, [] );
+			}
+			this.percentageLabels.get( controlKey )!.push( controlElement[2] );
 
 			this.rightColumn.appendChild( controlElement[0] );
 			this.rightColumn.appendChild( controlElement[1] );
@@ -106,7 +125,7 @@ export class AppliancesTile extends BaseTile {
 			console.log( `📝 Created Shoelace dimmer control for ${appliance.device.name}` );
 		} );
 
-		console.log( `📋 Total Shoelace control elements created: ${this.controlElements.size}` );
+		console.log( `📋 Total Shoelace control elements created: ${Array.from( this.controlElements.values() ).reduce( ( sum, arr ) => sum + arr.length, 0 )}` );
 	}
 
 	private createShoelaceToggleControl( appliance: ApplianceDevice ): HTMLElement[] {
@@ -185,52 +204,58 @@ export class AppliancesTile extends BaseTile {
 	}
 
 	private async updateToggleDevice( deviceId: string, value: boolean ): Promise<void> {
-		const controlElement = this.controlElements.get( `${deviceId}-onoff` );
+		const controlKey = `${deviceId}-onoff`;
+		const controlElements = this.controlElements.get( controlKey ) || [];
 		
 		try {
-			if ( controlElement ) {
-				controlElement.classList.add( 'control-item--loading' );
-			}
+			// Add loading state to all control elements
+			controlElements.forEach( element => {
+				element.classList.add( 'control-item--loading' );
+			} );
 
 			const device = this.deviceMap.get( deviceId );
 			if ( device ) {
 				await device.setCapabilityValue( 'onoff', value );
 			}
 			
-			if ( controlElement ) {
-				controlElement.classList.remove( 'control-item--loading' );
-				controlElement.classList.toggle( 'control-item--active', value );
-			}
+			// Remove loading state and update active state for all control elements
+			controlElements.forEach( element => {
+				element.classList.remove( 'control-item--loading' );
+				element.classList.toggle( 'control-item--active', value );
+			} );
 		} catch ( error ) {
 			console.error( `Failed to update toggle for device ${deviceId}:`, error );
 			
-			if ( controlElement ) {
-				controlElement.classList.remove( 'control-item--loading' );
-				controlElement.classList.add( 'control-item--error' );
+			// Handle error state for all control elements
+			controlElements.forEach( element => {
+				element.classList.remove( 'control-item--loading' );
+				element.classList.add( 'control-item--error' );
 				
 				// Revert the switch state
-				const switchElement = controlElement.querySelector( 'sl-switch' );
+				const switchElement = element.querySelector( 'sl-switch' );
 				if ( switchElement ) {
-					switchElement.checked = !value;
+					( switchElement as SlSwitch ).checked = !value;
 				}
-				
-				// Reset error state after 2 seconds
-				setTimeout( () => {
-					if ( controlElement ) {
-						controlElement.classList.remove( 'control-item--error' );
-					}
-				}, 2000 );
-			}
+			} );
+			
+			// Reset error state after 2 seconds for all elements
+			setTimeout( () => {
+				controlElements.forEach( element => {
+					element.classList.remove( 'control-item--error' );
+				} );
+			}, 2000 );
 		}
 	}
 
 	private async updateSliderDevice( deviceId: string, value: number, label?: HTMLElement ): Promise<void> {
-		const controlElement = this.controlElements.get( `${deviceId}-dim` );
+		const controlKey = `${deviceId}-dim`;
+		const controlElements = this.controlElements.get( controlKey ) || [];
 		
 		try {
-			if ( controlElement ) {
-				controlElement.classList.add( 'control-item--loading' );
-			}
+			// Add loading state to all control elements
+			controlElements.forEach( element => {
+				element.classList.add( 'control-item--loading' );
+			} );
 
 			const device = this.deviceMap.get( deviceId );
 			if ( device ) {
@@ -243,10 +268,11 @@ export class AppliancesTile extends BaseTile {
 				await device.setCapabilityValue( 'onoff', onoffValue );
 			}
 			
-			if ( controlElement ) {
-				controlElement.classList.remove( 'control-item--loading' );
-				controlElement.classList.toggle( 'control-item--active', value > 0 );
-			}
+			// Remove loading state and update active state for all control elements
+			controlElements.forEach( element => {
+				element.classList.remove( 'control-item--loading' );
+				element.classList.toggle( 'control-item--active', value > 0 );
+			} );
 
 			if ( label ) {
 				label.textContent = `${value}%`;
@@ -254,17 +280,18 @@ export class AppliancesTile extends BaseTile {
 		} catch ( error ) {
 			console.error( `Failed to update dimmer for device ${deviceId}:`, error );
 			
-			if ( controlElement ) {
-				controlElement.classList.remove( 'control-item--loading' );
-				controlElement.classList.add( 'control-item--error' );
-				
-				// Reset error state after 2 seconds
-				setTimeout( () => {
-					if ( controlElement ) {
-						controlElement.classList.remove( 'control-item--error' );
-					}
-				}, 2000 );
-			}
+			// Handle error state for all control elements
+			controlElements.forEach( element => {
+				element.classList.remove( 'control-item--loading' );
+				element.classList.add( 'control-item--error' );
+			} );
+			
+			// Reset error state after 2 seconds for all elements
+			setTimeout( () => {
+				controlElements.forEach( element => {
+					element.classList.remove( 'control-item--error' );
+				} );
+			}, 2000 );
 		}
 	}
 
@@ -324,34 +351,50 @@ export class AppliancesTile extends BaseTile {
 
 	private updateShoelaceToggleUI( deviceId: string, value: boolean ): void {
 		const controlKey = `${deviceId}-onoff`;
-		const controlElement = this.controlElements.get( controlKey );
-		console.log( `🔄 updateShoelaceToggleUI: ${deviceId} = ${value}` );
-		
-		if ( controlElement ) {
-			( controlElement as SlSwitch ).checked = value;
+		const controlElements = this.controlElements.get( controlKey ) || [];
 
+		console.log( `🔄 updateShoelaceToggleUI: ${deviceId} = ${value} (updating ${controlElements.length} elements)` );
+		
+		// Update all control elements for this device-capability combination
+		controlElements.forEach( controlElement => {
+			( controlElement as SlSwitch ).checked = value;
 			controlElement.classList.toggle( 'control-item--active', value );
-		} else {
-			console.warn( `Control element not found for key: ${controlKey}` );
+		} );
+		
+		if ( controlElements.length === 0 ) {
+			console.warn( `No control elements found for key: ${controlKey}` );
 		}
 	}
 
 	private updateShoelaceSliderUI( deviceId: string, value: number ): void {
 		const controlKey = `${deviceId}-dim`;
-		const controlElement = this.controlElements.get( controlKey );
-		console.log( `🔄 updateShoelaceSliderUI: ${deviceId} = ${value}` );
+		const controlElements = this.controlElements.get( controlKey ) || [];
+		const percentageLabels = this.percentageLabels.get( controlKey ) || [];
 		
-		if ( controlElement ) {
-			( controlElement as SlRange ).value = Math.round( value * 100 );
+		console.log( `🔄 updateShoelaceSliderUI: ${deviceId} = ${value} (updating ${controlElements.length} sliders and ${percentageLabels.length} labels)` );
+		
+		const sliderValue = Math.round( value * 100 );
+		const labelText = sliderValue === 0 ? 'OFF' : `${sliderValue}%`;
+		
+		// Update all control elements for this device-capability combination
+		controlElements.forEach( controlElement => {
+			( controlElement as SlRange ).value = sliderValue;
 			
 			const device = this.deviceMap.get( deviceId );
 			const isOn = device?.capabilitiesObj?.onoff?.value ?? false;
 			controlElement.classList.toggle( 'control-item--active', isOn && value > 0 );
-		} else {
-			console.warn( `Control element not found for key: ${controlKey}` );
+		} );
+		
+		// Update all percentage labels
+		percentageLabels.forEach( label => {
+			label.textContent = labelText;
+		} );
+		
+		if ( controlElements.length === 0 ) {
+			console.warn( `No control elements found for key: ${controlKey}` );
 		}
-	}
-
+	}	
+	
 	public getElement(): HTMLElement {
 		return this.element;
 	}

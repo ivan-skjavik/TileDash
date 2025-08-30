@@ -55,17 +55,31 @@ protected async setupEventListeners(): Promise<void> {
 	}
 
 	try {
-		// Set up listeners for each device-capability combination
+		// Create a unique set of device-capability combinations to avoid duplicate listeners
+		const uniqueListeners = new Set<string>();
+		const listenersToCreate: Array<{ deviceId: string; capabilityId: string }> = [];
+		
 		for ( const mapping of this.deviceCapabilityMap ) {
-			const device = this.deviceMap.get( mapping.deviceId );
+			const listenerKey = `${mapping.deviceId}:${mapping.capabilityId}`;
+			if ( !uniqueListeners.has( listenerKey ) ) {
+				uniqueListeners.add( listenerKey );
+				listenersToCreate.push( { deviceId: mapping.deviceId, capabilityId: mapping.capabilityId, } );
+			}
+		}
+		
+		console.log( `🔧 Creating ${listenersToCreate.length} unique listeners from ${this.deviceCapabilityMap.length} device-capability mappings` );
+
+		// Set up listeners for each unique device-capability combination
+		for ( const listener of listenersToCreate ) {
+			const device = this.deviceMap.get( listener.deviceId );
 			if ( !device ) {
-				console.warn( `Device ${mapping.deviceId} not found for tile ${this.tileId}` );
+				console.warn( `Device ${listener.deviceId} not found for tile ${this.tileId}` );
 				continue;
 			}
 
 			// Create capability instance listener
-			const cleanup = device.makeCapabilityInstance( mapping.capabilityId, ( newValue: any ) => {
-				this.handleDeviceUpdate( newValue, undefined, mapping.deviceId, mapping.capabilityId );
+			const cleanup = device.makeCapabilityInstance( listener.capabilityId, ( newValue: any ) => {
+				this.handleDeviceUpdate( newValue, undefined, listener.deviceId, listener.capabilityId );
 			} );
 
 			// Store cleanup callback if the API provides one
@@ -73,7 +87,7 @@ protected async setupEventListeners(): Promise<void> {
 				this.eventCleanupCallbacks.push( cleanup );
 			}
 
-			console.log( `✅ Setup device listener for tile ${this.tileId}:${mapping.deviceId}:${mapping.capabilityId}` );
+			console.log( `✅ Setup device listener for tile ${this.tileId}:${listener.deviceId}:${listener.capabilityId}` );
 		}
 	} catch ( error ) {
 		console.error( `❌ Failed to setup device listeners for tile ${this.tileId}:`, error );
