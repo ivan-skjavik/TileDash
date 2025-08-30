@@ -31,60 +31,6 @@ export class TileFactory {
 			errors.push( 'Width and height must be positive numbers' );
 		}
 		
-		// Type-specific validation using type guards
-		if ( isTileOfType( config, 'SLIDER' ) ) {
-			// TypeScript knows this is SliderTile
-			if ( config.minValue >= config.maxValue ) {
-				errors.push( 'Slider minValue must be less than maxValue' );
-			}
-			if ( config.step <= 0 ) {
-				errors.push( 'Slider step must be positive' );
-			}
-			// Check for device configuration (legacy or new)
-			if ( !config.id && !config.devices ) {
-				errors.push( 'Slider tiles require device configuration (id or devices)' );
-			}
-			if ( !config.capabilityID && !config.devices ) {
-				errors.push( 'Slider tiles require capability configuration (capabilityID or devices)' );
-			}
-			if ( ![ 'horizontal', 'vertical', ].includes( config.orientation ) ) {
-				errors.push( 'Slider orientation must be horizontal or vertical' );
-			}
-		}
-		
-		if ( isTileOfType( config, 'SWITCH' ) ) {
-			// TypeScript knows this is SwitchTile
-			if ( !config.id && !config.devices ) {
-				errors.push( 'Switch tiles require device configuration (id or devices)' );
-			}
-			if ( !config.capabilityID && !config.devices ) {
-				errors.push( 'Switch tiles require capability configuration (capabilityID or devices)' );
-			}
-		}
-		
-		if ( isTileOfType( config, 'SENSOR' ) ) {
-			// TypeScript knows this is SensorTile
-			if ( !config.id && !config.devices ) {
-				errors.push( 'Sensor tiles require device configuration (id or devices)' );
-			}
-			if ( !config.capabilityID && !config.devices ) {
-				errors.push( 'Sensor tiles require capability configuration (capabilityID or devices)' );
-			}
-			if ( !config.unit ) {
-				errors.push( 'Sensor tiles require a unit' );
-			}
-		}
-		
-		if ( isTileOfType( config, 'BUTTON' ) ) {
-			// TypeScript knows this is ButtonTile
-			if ( !config.id && !config.devices ) {
-				errors.push( 'Button tiles require device configuration (id or devices)' );
-			}
-			if ( !config.capabilityID && !config.flowID && !config.devices ) {
-				errors.push( 'Button tiles require either capabilityID/flowID or devices configuration' );
-			}
-		}
-		
 		if ( isTileOfType( config, 'APPLIANCES' ) ) {
 			// TypeScript knows this is AppliancesTile
 			if ( !config.id && !config.devices ) {
@@ -109,8 +55,8 @@ export class TileFactory {
 			if ( config.tariffCost && config.tariffCost < 0 ) {
 				errors.push( 'Energy price tiles tariff cost cannot be negative' );
 			}
-			if ( config.taxPercentage && ( config.taxPercentage < 0 || config.taxPercentage > 50 ) ) {
-				errors.push( 'Energy price tiles tax percentage must be between 0 and 50%' );
+			if ( config.taxPercentage && ( config.taxPercentage < 0 || config.taxPercentage > 100 ) ) {
+				errors.push( 'Energy price tiles tax percentage must be between 0 and 100%' );
 			}
 		}
 		
