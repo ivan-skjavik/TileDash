@@ -7,6 +7,7 @@ import { TileHMRHelper } from '../utils/TileHMR';
 export class LiveCameraFeedTile extends BaseTile {
 	private currentCameraIndex: number = -1; // -1 means no camera selected
 	private videoElement: HTMLVideoElement | null = null;
+	private imageElement: HTMLImageElement | null = null;
 	private videoContainer: HTMLElement | null = null;
 	private buttonContainer: HTMLElement | null = null;
 	private errorContainer: HTMLElement | null = null;
@@ -69,21 +70,32 @@ export class LiveCameraFeedTile extends BaseTile {
 		this.errorContainer = document.createElement( 'div' );
 		this.errorContainer.classList.add( 'camera-error-container', 'hidden' );
 
-		// Create video element
+		// Create video element for non-RTSP streams or image element for MJPEG
 		this.videoElement = document.createElement( 'video' );
 		this.videoElement.classList.add( 'camera-video' );
 		this.videoElement.autoplay = true;
 		this.videoElement.muted = true; // Required for autoplay in most browsers
 		this.videoElement.playsInline = true; // Better mobile support
 		
-		// Apply object-fit style
+		// Create image element for MJPEG streams
+		this.imageElement = document.createElement( 'img' );
+		this.imageElement.classList.add( 'camera-video', 'camera-image' );
+		
+		// Apply object-fit style to both elements
 		const objectFit = this.cameraConfig.objectFit || 'cover';
 		this.videoElement.style.objectFit = objectFit;
+		this.imageElement.style.objectFit = objectFit;
 
 		// Add video event listeners
 		this.setupVideoEventListeners();
+		this.setupImageEventListeners();
+
+		// Initially hide both elements
+		this.videoElement.style.display = 'none';
+		this.imageElement.style.display = 'none';
 
 		this.videoContainer.appendChild( this.videoElement );
+		this.videoContainer.appendChild( this.imageElement );
 		this.videoContainer.appendChild( this.errorContainer );
 
 		container.appendChild( header );
@@ -190,6 +202,34 @@ export class LiveCameraFeedTile extends BaseTile {
 		} );
 	}
 
+	private setupImageEventListeners(): void {
+		if ( !this.imageElement ) return;
+
+		this.imageElement.addEventListener( 'load', () => {
+			console.log( `📹 Image loaded for MJPEG camera ${this.currentCameraIndex}` );
+			console.log( `📹 Image dimensions: ${this.imageElement?.naturalWidth}x${this.imageElement?.naturalHeight}` );
+			this.element.classList.remove( 'tile--loading' );
+			this.isStreaming = true;
+			this.hideError();
+		} );
+
+		this.imageElement.addEventListener( 'error', ( event ) => {
+			console.error( `❌ Image error for MJPEG camera ${this.currentCameraIndex}:`, event );
+			console.error( `❌ Image src was:`, this.imageElement?.src );
+			this.element.classList.remove( 'tile--loading' );
+			this.isStreaming = false;
+			this.showError( 'Failed to load MJPEG stream' );
+		} );
+
+		this.imageElement.addEventListener( 'loadstart', () => {
+			console.log( `📹 Image loadstart for MJPEG camera ${this.currentCameraIndex}` );
+		} );
+
+		this.imageElement.addEventListener( 'loadend', () => {
+			console.log( `📹 Image loadend for MJPEG camera ${this.currentCameraIndex}` );
+		} );
+	}
+
 	private selectCamera( index: number ): void {
 		if ( index === this.currentCameraIndex ) return;
 
@@ -208,7 +248,7 @@ export class LiveCameraFeedTile extends BaseTile {
 	}
 
 	private startStream( camera: CameraStream ): void {
-		if ( !this.videoElement ) return;
+		if ( !this.videoElement || !this.imageElement ) return;
 
 		console.log( `📹 Starting stream for camera: ${camera.title}` );
 		
@@ -216,11 +256,12 @@ export class LiveCameraFeedTile extends BaseTile {
 		this.hideError();
 
 		try {
-			// For RTSP streams, use our server-side FFmpeg conversion
+			// For RTSP streams, use our server-side FFmpeg conversion (MJPEG output)
 			if ( camera.rtspUrl.startsWith( 'rtsp://' ) ) {
 				this.startRTSPStream( camera );
 			} else {
-				// For HTTP/HLS streams, play directly
+				// For HTTP/HLS streams, play directly in video element
+				this.showVideoElement();
 				this.videoElement.src = camera.rtspUrl;
 				this.videoElement.load();
 			}
@@ -228,6 +269,20 @@ export class LiveCameraFeedTile extends BaseTile {
 		} catch ( error ) {
 			console.error( `❌ Failed to start stream for camera ${camera.title}:`, error );
 			this.showError( `Failed to connect to ${camera.title}` );
+		}
+	}
+
+	private showVideoElement(): void {
+		if ( this.videoElement && this.imageElement ) {
+			this.videoElement.style.display = 'block';
+			this.imageElement.style.display = 'none';
+		}
+	}
+
+	private showImageElement(): void {
+		if ( this.videoElement && this.imageElement ) {
+			this.videoElement.style.display = 'none';
+			this.imageElement.style.display = 'block';
 		}
 	}
 
@@ -329,14 +384,27 @@ export class LiveCameraFeedTile extends BaseTile {
 				throw new Error( 'Stream conversion timed out - FFmpeg may have failed to start' );
 			}
 
-			// Start MJPEG playback
-			if ( this.videoElement ) {
+			// Start MJPEG playback using image element
+			if ( this.imageElement ) {
 				const finalStreamUrl = `${serverUrl}${result.streamUrl}`;
-				console.log( `📹 Setting video source to: ${finalStreamUrl}` );
-				this.videoElement.src = finalStreamUrl;
-				this.videoElement.load();
+				console.log( `📹 Setting image source to: ${finalStreamUrl}` );
+				console.log( `📹 Image element:`, this.imageElement );
+				console.log( `📹 Video element display:`, this.videoElement?.style.display );
+				console.log( `📹 Image element display:`, this.imageElement.style.display );
+				
+				// Show the image element and hide video element
+				this.showImageElement();
+				
+				console.log( `📹 After showImageElement - Video display:`, this.videoElement?.style.display );
+				console.log( `📹 After showImageElement - Image display:`, this.imageElement.style.display );
+				
+				// Set up loading state for image
+				this.element.classList.add( 'tile--loading' );
+				
+				this.imageElement.src = finalStreamUrl;
 				this.isStreaming = true;
-				this.element.classList.remove( 'tile--loading' );
+				
+				console.log( `📹 Image src set to:`, this.imageElement.src );
 			}
 
 			console.log( `📹 MJPEG stream ready: ${result.streamId}` );
@@ -378,7 +446,7 @@ export class LiveCameraFeedTile extends BaseTile {
 	}
 
 	private stopStream(): void {
-		if ( !this.videoElement ) return;
+		if ( !this.videoElement || !this.imageElement ) return;
 
 		console.log( `⏹️ Stopping camera stream` );
 		
@@ -396,9 +464,16 @@ export class LiveCameraFeedTile extends BaseTile {
 			this.currentStreamId = null;
 		}
 		
+		// Clear both video and image sources
 		this.videoElement.pause();
 		this.videoElement.src = '';
 		this.videoElement.load();
+		this.imageElement.src = '';
+		
+		// Hide both elements
+		this.videoElement.style.display = 'none';
+		this.imageElement.style.display = 'none';
+		
 		this.isStreaming = false;
 		this.element.classList.remove( 'tile--loading' );
 	}

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MJPEG Stream Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .stream-container {
+            width: 640px;
+            height: 480px;
+            border: 2px solid #333;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .stream-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MJPEG Stream Test</h1>
+        
+        <div class="status" id="status">
+            Ready to start stream
+        </div>
+        
+        <div class="controls">
+            <button onclick="startStream()" id="startBtn">Start Stream</button>
+            <button onclick="stopStream()" id="stopBtn" disabled>Stop Stream</button>
+        </div>
+        
+        <div class="stream-container">
+            <img id="streamImg" class="stream-img" style="display: none;" />
+            <div id="placeholder" style="display: flex; align-items: center; justify-content: center; height: 100%; background: #333; color: white; font-size: 18px;">
+                No stream active
+            </div>
+        </div>
+        
+        <div>
+            <h3>Debug Info:</h3>
+            <pre id="debugInfo"></pre>
+        </div>
+    </div>
+
+    <script>
+        let currentStreamId = null;
+        
+        async function startStream() {
+            const statusEl = document.getElementById('status');
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const streamImg = document.getElementById('streamImg');
+            const placeholder = document.getElementById('placeholder');
+            const debugInfo = document.getElementById('debugInfo');
+            
+            try {
+                statusEl.textContent = 'Starting stream...';
+                statusEl.style.background = '#fff3cd';
+                statusEl.style.borderColor = '#ffeaa7';
+                
+                startBtn.disabled = true;
+                
+                debugInfo.textContent = 'Making request to /api/stream/start...';
+                
+                // Start the RTSP stream conversion
+                const response = await fetch('/api/stream/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        rtspUrl: 'rtsp://10.0.0.221:554/stream1',
+                        username: 'admin-ivan',
+                        password: 'xatcok-sactu7-kudhyT',
+                        quality: 'medium'
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                currentStreamId = result.streamId;
+                
+                debugInfo.textContent = `Stream started: ${JSON.stringify(result, null, 2)}`;
+                
+                // Wait a moment for FFmpeg to initialize
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Set the MJPEG stream URL
+                const streamUrl = `http://localhost:3012${result.streamUrl}`;
+                debugInfo.textContent += `\n\nLoading MJPEG from: ${streamUrl}`;
+                
+                streamImg.onload = function() {
+                    statusEl.textContent = 'Stream active';
+                    statusEl.style.background = '#d4edda';
+                    statusEl.style.borderColor = '#c3e6cb';
+                    placeholder.style.display = 'none';
+                    streamImg.style.display = 'block';
+                    stopBtn.disabled = false;
+                    debugInfo.textContent += '\n\nImage loaded successfully!';
+                };
+                
+                streamImg.onerror = function(error) {
+                    statusEl.textContent = 'Failed to load stream';
+                    statusEl.style.background = '#f8d7da';
+                    statusEl.style.borderColor = '#f5c6cb';
+                    debugInfo.textContent += `\n\nImage load error: ${error}`;
+                    startBtn.disabled = false;
+                };
+                
+                streamImg.src = streamUrl;
+                
+            } catch (error) {
+                statusEl.textContent = `Error: ${error.message}`;
+                statusEl.style.background = '#f8d7da';
+                statusEl.style.borderColor = '#f5c6cb';
+                startBtn.disabled = false;
+                debugInfo.textContent = `Error: ${error.message}\n${error.stack || ''}`;
+            }
+        }
+        
+        async function stopStream() {
+            const statusEl = document.getElementById('status');
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const streamImg = document.getElementById('streamImg');
+            const placeholder = document.getElementById('placeholder');
+            const debugInfo = document.getElementById('debugInfo');
+            
+            try {
+                if (currentStreamId) {
+                    await fetch(`/api/stream/${currentStreamId}`, {
+                        method: 'DELETE'
+                    });
+                    currentStreamId = null;
+                }
+                
+                streamImg.src = '';
+                streamImg.style.display = 'none';
+                placeholder.style.display = 'flex';
+                
+                statusEl.textContent = 'Stream stopped';
+                statusEl.style.background = '#d4edda';
+                statusEl.style.borderColor = '#c3e6cb';
+                
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                
+                debugInfo.textContent = 'Stream stopped';
+                
+            } catch (error) {
+                debugInfo.textContent = `Stop error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
