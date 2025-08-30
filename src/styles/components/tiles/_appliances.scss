@@ -28,6 +28,7 @@
 	justify-items: end;
 	gap: 8px;
 	overflow-y: auto;
+	padding-top: 4px;
 
 	&.--right {
 		grid-template-columns: auto auto auto;
