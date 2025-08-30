@@ -370,6 +370,28 @@ body {
     }
 }
 
+.apexcharts-canvas {
+    .apexcharts-xaxistooltip {
+        display: none !important;
+    }
+
+    .apexcharts-tooltip {
+        top:0 !important;
+        padding: 4px;
+        padding-bottom: 0;
+
+        .apexcharts-tooltip-title {
+            margin-bottom:0;
+            padding: 0 6px;
+        }
+
+        .apexcharts-tooltip-series-group {
+            padding-bottom: 0;
+            line-height: 100%;
+        }
+    }
+}
+
 // .tile__icon {
 // 	font-size: 1.5rem;
 // 	margin-bottom: 0.5rem;

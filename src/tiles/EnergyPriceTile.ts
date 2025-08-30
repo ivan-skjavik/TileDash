@@ -216,6 +216,11 @@ export class EnergyPriceTile extends BaseTile {
 			y: item.ORE_per_kWh,
 		} ) );
 
+		// Calculate dynamic price range for gradient mapping
+		const prices = this.priceData.map( item => item.ORE_per_kWh );
+		const minPrice = Math.min( ...prices );
+		// const maxPrice = Math.max( ...prices );
+
 		// Get current hour for highlighting (in local timezone)
 		const now = new Date();
 		const currentHour = new Date( now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() );
@@ -226,7 +231,7 @@ export class EnergyPriceTile extends BaseTile {
 
 		const options = {
 			series: [ {
-				name: 'Strømpris',
+				name: '',
 				data: series,
 			}, ],
 			chart: {
@@ -234,8 +239,11 @@ export class EnergyPriceTile extends BaseTile {
 				height: this.chartContainer.clientHeight || 200,
 				toolbar: { show: false, },
 				background: 'transparent',
-				foreColor: 'var(--text-color, #333)',
+				foreColor: 'var(--text-color, #666)',
 				animations: { enabled: false, },
+				zoom: {
+					enabled: false,
+				},
 			},
 			stroke: {
 				curve: 'stepline', // Hard edges, no smoothing
@@ -245,20 +253,29 @@ export class EnergyPriceTile extends BaseTile {
 			fill: {
 				type: 'gradient',
 				gradient: {
-					shade: 'below',
+					shade: 'dark',
 					type: 'vertical',
-					opacityFrom: 0.6,
-					opacityTo: 0.1,
-					stops: [ 0, 100, ],
-					colorStops: [ {
-						offset: 0,
-						color: this.energyConfig.graphOptions?.fillColor || 'var(--chart-color-expensive)',
-						opacity: 1,
-					}, {
-						offset: 100,
-						color: this.energyConfig.graphOptions?.fillColor || 'var(--chart-color-cheap)',
-						opacity: 1,
-					}, ],
+					opacityFrom: 0.8,
+					opacityTo: 1,
+					shadeIntensity: 1,
+					stops: [ 0, 33, 66, 100, ],
+					colorStops: [
+						{
+							offset: 0,
+							color: this.energyConfig.graphOptions?.fillColor || 'var(--chart-color-expensive)',
+							opacity: 1,
+						},
+						{
+							offset: 50,
+							color: 'var(--chart-color-normal)',
+							opacity: 1,
+						},
+						{
+							offset: 100,
+							color: this.energyConfig.graphOptions?.fillColor || 'var(--chart-color-cheap)',
+							opacity: 1,
+						},
+					],
 				},
 			},
 			markers: {
@@ -273,9 +290,12 @@ export class EnergyPriceTile extends BaseTile {
 					datetimeUTC: false, // Use local timezone for display
 				},
 				axisBorder: { color: 'transparent', },
-				axisTicks: false, //{ color: 'var(--border-color, #ddd)', },
+				axisTicks: { color: 'var(--text-color, #666)', },
 			},
 			yaxis: {
+				// max: Math.floor(maxPrice),
+				min: Math.floor( minPrice ),
+				stepSize: 30,
 				title: { 
 					text: 'øre/kWh',
 					style: { color: 'var(--text-color, #666)', },
@@ -284,16 +304,21 @@ export class EnergyPriceTile extends BaseTile {
 					style: { colors: 'var(--text-color, #666)', },
 					formatter: ( value: number ) => value.toFixed( 0 ),
 				},
+				axisTicks: { color: 'var(--text-color, #666)', },
+				crosshairs: {
+					show: true,
+				},
 			},
 			grid: {
-				borderColor: 'var(--border-color, #e0e0e0)',
+				borderColor: 'var(--border-color, #666)',
 				opacity: 0.3,
 			},
 			tooltip: {
-				theme: false, // Use CSS theming
+				theme: true, // Use CSS theming
 				followCursor: false,
 				fillSeriesColor: true,
 				x: { 
+					// show: false,
 					format: 'dd/MM HH:mm',
 					formatter: ( value: number ) => {
 						// Format tooltip time in local timezone
@@ -303,15 +328,9 @@ export class EnergyPriceTile extends BaseTile {
 					},
 				},
 				y: { formatter: ( value: number ) => `${value.toFixed( 2 )} øre/kWh`, },
-				// fixed: {
-				// 	enabled: false,
-				// 	position: 'topRight',
-				// 	offsetX: 0,
-				// 	offsetY: -100,
-				// },
-				// marker: {
-				// 	show: true,
-				// },
+				marker: {
+					show: false,
+				},
 			},
 			annotations: {
 				xaxis: [ 
