@@ -11,6 +11,10 @@
 	box-sizing: border-box;
 	margin: 0;
 	padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none; /* Optional: Prevents text selection on touch */
+    -webkit-user-select: none; /* Optional: Prevents text selection on touch */
+    touch-action: manipulation; /* Optional: Improves touch responsiveness */
 }
 
 html, body {
@@ -28,6 +32,8 @@ html, body {
     grid-template-rows: [header] 50px [main] auto [footer] 100px [last-line];
     gap: 0;
     margin-left: var(--app-container-left-padding);
+    background-color: var(--app-background);
+    color: var(--app-text-body);
 }
 
 .navigation {
@@ -36,7 +42,6 @@ html, body {
     top: 0;
     bottom: 0;
     width: var(--nav-width, 50px);
-    background-color: lightgrey;
     display: none;
     flex-direction: column;
     justify-content: center;
@@ -98,6 +103,7 @@ html, body {
 }
 
 body {
+
     &.--nav-active {
         // TODO add padding to main grid item
         .dashboard-container {
@@ -221,8 +227,6 @@ body {
 }
 
 .dashboard-container {
-    // background-color: pink;
-
     .dashboard-page {
         display: none;
         // align-items: flex-start;
@@ -257,6 +261,7 @@ body {
 	text-align: center;
 	position: relative;
 	overflow: hidden;
+    user-select: none;
     
     .tile-container {
         display: flex;
