@@ -18,7 +18,7 @@ export class HomeyClient {
 		// Load OAuth credentials from environment variables
 		this.CLIENT_ID = import.meta.env.VITE_HOMEY_CLIENT_ID || '';
 		this.CLIENT_SECRET = import.meta.env.VITE_HOMEY_CLIENT_SECRET || '';
-		this.REDIRECT_URL = import.meta.env.VITE_HOMEY_REDIRECT_URL || 'http://localhost:3000/auth/callback';
+		this.REDIRECT_URL = import.meta.env.VITE_HOMEY_REDIRECT_URL || this.getDynamicRedirectUrl();
 
 		// Validate that required credentials are available
 		if ( !this.CLIENT_ID || !this.CLIENT_SECRET ) {
@@ -28,6 +28,22 @@ export class HomeyClient {
 		}
 
 		console.log( '🔐 HomeyClient initialized with environment credentials' );
+		console.log( '🔗 Using redirect URL:', this.REDIRECT_URL );
+	}
+
+	/**
+	 * Generate dynamic redirect URL based on current window location
+	 */
+	private getDynamicRedirectUrl(): string {
+		const protocol = window.location.protocol; // http: or https:
+		const hostname = window.location.hostname; // localhost, 10.0.0.150, etc.
+		const port = window.location.port; // 3000, 5173, etc.
+		
+		const portSuffix = port ? `:${port}` : '';
+		const dynamicUrl = `${protocol}//${hostname}${portSuffix}/auth/callback`;
+		
+		console.log( `🌐 Generated dynamic redirect URL: ${dynamicUrl}` );
+		return dynamicUrl;
 	}
 
 	public get devices() {
@@ -79,6 +95,8 @@ export class HomeyClient {
     * Start OAuth authorization flow
     */
 	private async startOAuthFlow(): Promise<void> {
+		console.log( '🔗 Starting OAuth flow with redirect URL:', this.REDIRECT_URL );
+		
 		this.api = new AthomCloudAPI( {
 			clientId: this.CLIENT_ID,
 			clientSecret: this.CLIENT_SECRET,
