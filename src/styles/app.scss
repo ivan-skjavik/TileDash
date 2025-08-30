@@ -181,11 +181,8 @@ body {
             align-items: flex-start;
             max-width: fit-content;
 
-            background-color: var(--header-tile-background);
-            border-radius: var(--header-tile-radius);
             padding: var(--header-tile-padding);
             border: var(--header-tile-border);
-            box-shadow: var(--app-box-shadow);
 
             .current-time {
                 margin-right: 0.7rem;
@@ -205,19 +202,12 @@ body {
         .header-custom-text {
             display: flex;
             max-width: fit-content;
-            background-color: var(--header-tile-background);
-            border-radius: var(--header-tile-radius);
             padding: var(--header-tile-padding);
-            border: var(--header-tile-border);
-             box-shadow: var(--app-box-shadow);
         }
 
         .header-value {
-            background-color: var(--header-tile-background);
-            border-radius: var(--header-tile-radius);
             padding: var(--header-tile-padding);
             border: var(--header-tile-border);
-            box-shadow: var(--app-box-shadow);
         }
     }
 

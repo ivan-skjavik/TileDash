@@ -1,33 +1,3 @@
-@use "sass:color";
-
-// Energy Price Tile Styles
-// .energy-price-tile {
-//   display: flex;
-//   flex-direction: column;
-//   padding: 12px;
-//   background: var(--tile-background, #fff);
-//   border-radius: var(--tile-border-radius, 8px);
-//   border: 1px solid var(--tile-border-color, #e0e0e0);
-//   overflow: hidden;
-  
-//   &.tile--has-error {
-//     border-color: var(--error-color, #f44336);
-//     background: var(--error-background, rgba(244, 67, 54, 0.05));
-    
-//     &::after {
-//       content: "⚠️ Error loading data";
-//       position: absolute;
-//       top: 50%;
-//       left: 50%;
-//       transform: translate(-50%, -50%);
-//       color: var(--error-color, #f44336);
-//       font-size: 12px;
-//       text-align: center;
-//       z-index: 10;
-//     }
-//   }
-// }
-
 .energy-tile-container {
   display: flex;
   flex-direction: column;
@@ -42,16 +12,6 @@
       margin-bottom: 0.5rem;
     }
   }
-}
-
-.energy-tile-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-color, #333);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  width: 100%;
 }
 
 .energy-current-price {
@@ -119,38 +79,6 @@
   }
 }
 
-// Dark theme adjustments
-.theme-dark .energy-price-tile {
-  background: var(--tile-background, #2d2d2d);
-  border-color: var(--tile-border-color, #404040);
-  
-  .energy-tile-title {
-    color: var(--text-color, #e0e0e0);
-  }
-  
-  .energy-current-price {
-    background: var(--secondary-background, rgba(255, 255, 255, 0.1));
-  }
-}
-
-// Responsive adjustments
-@media (max-width: 768px) {
-  .energy-tile-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 6px;
-  }
-  
-  .energy-tile-title {
-    text-align: center;
-  }
-  
-  .energy-current-price {
-    text-align: center;
-    font-size: 18px;
-  }
-}
-
 // Animation for loading states
 .energy-price-tile {
   .energy-chart-container:empty {
@@ -165,9 +93,4 @@
       animation: pulse 1.5s ease-in-out infinite;
     }
   }
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
 }
