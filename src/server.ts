@@ -29,6 +29,8 @@ interface StreamConfig {
 
 // Default quality presets
 const QUALITY_PRESETS: Record<string, StreamQuality> = {
+	ultralow: { resolution: '320x240', bitrate: '200k', fps: 5, },
+	verylow: { resolution: '512x384', bitrate: '350k', fps: 10, },
 	low: { resolution: '640x480', bitrate: '500k', fps: 15, },
 	medium: { resolution: '1280x720', bitrate: '1500k', fps: 20, },
 	high: { resolution: '1920x1080', bitrate: '3000k', fps: 25, },

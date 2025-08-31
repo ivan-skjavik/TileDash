@@ -105,11 +105,11 @@ export const appConfig: AppConfig = {
 							width: 5,
 							height: 4,
 							name: "Security Cameras",
-							quality: 'low',
+							quality: 'verylow',
 							cameras: [
 								{
 									title: "Stue",
-									rtspUrl: "rtsp://10.0.0.221:554/stream1",
+									rtspUrl: "rtsp://10.0.0.221:554/stream2",
 									username: "admin-ivan",
 									password: "xatcok-sactu7-kudhyT",
 								},

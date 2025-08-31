@@ -417,7 +417,7 @@ export interface LiveCameraFeedTileConfig extends BaseTileData {
   /** How the video should be fitted within the tile (default: 'cover') */
   objectFit?: 'cover' | 'contain' | 'fill';
   /** Stream quality preset for RTSP conversion (default: 'medium') */
-  quality?: 'low' | 'medium' | 'high' | 'ultra';
+  quality?: 'ultralow' | 'verylow' | 'low' | 'medium' | 'high' | 'ultra';
 }
 
 export type Tile = 
