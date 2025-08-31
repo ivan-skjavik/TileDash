@@ -36,19 +36,13 @@ const QUALITY_PRESETS: Record<string, StreamQuality> = {
 
 // Active streams management
 class StreamManager {
-	private streams: Map<string, { process: ChildProcess; lastAccess: number; config: StreamConfig; clients: Set<Response> }> = new Map();
-	private cleanupInterval: NodeJS.Timeout;
+	private streams: Map<string, { process: ChildProcess; config: StreamConfig; clients: Set<Response> }> = new Map();
 	private streamDir: string;
 
 	constructor() {
 		this.streamDir = join( __dirname, '../public/streams' );
 		this.ensureStreamDirectory();
 		
-		// Cleanup inactive streams every 30 seconds
-		this.cleanupInterval = setInterval( () => {
-			this.cleanupInactiveStreams();
-		}, 30000 );
-
 		// Cleanup on process exit
 		process.on( 'exit', () => this.cleanup() );
 		process.on( 'SIGINT', () => this.cleanup() );
@@ -61,27 +55,25 @@ class StreamManager {
 		}
 	}
 
-	private generateStreamId( rtspUrl: string, quality: string ): string {
-		// Create a unique ID based on URL and quality
-		const hash = Buffer.from( `${rtspUrl}_${quality}` ).toString( 'base64' )
+	private generateStreamId( rtspUrl: string, quality: string, clientId?: string ): string {
+		// Create a unique ID based on URL, quality, and optional client ID for per-client streams
+		const baseString = clientId ? `${rtspUrl}_${quality}_${clientId}` : `${rtspUrl}_${quality}`;
+		const hash = Buffer.from( baseString ).toString( 'base64' )
 			.replace( /[/+=]/g, '' )
-			.substring( 0, 16 );
+			.substring( 0, 20 ); // Slightly longer to reduce collisions
 		return hash;
 	}
 
 	public startStream( streamId: string, config: StreamConfig ): boolean {
 		try {
-			// Check if stream already exists
+			// Always create a new stream to avoid frame mixing between clients
+			// If a stream with this ID exists, it means something went wrong, so stop it first
 			if ( this.streams.has( streamId ) ) {
-				const stream = this.streams.get( streamId );
-				if ( stream ) {
-					stream.lastAccess = Date.now();
-					console.log( `📹 Reusing existing stream: ${streamId}` );
-					return true;
-				}
+				console.log( `⚠️  Stream ID collision detected, stopping existing stream: ${streamId}` );
+				this.stopStream( streamId );
 			}
 
-			console.log( `📹 Starting FFmpeg stream: ${streamId}` );
+			console.log( `📹 Starting new FFmpeg stream: ${streamId}` );
 			
 			// Prepare FFmpeg arguments
 			const args = this.buildFFmpegArgs( config );
@@ -153,7 +145,6 @@ class StreamManager {
 			// Store stream info
 			this.streams.set( streamId, {
 				process: ffmpegProcess,
-				lastAccess: Date.now(),
 				config,
 				clients: new Set(),
 			} );
@@ -194,15 +185,6 @@ class StreamManager {
 
 		console.log( `🔧 FFmpeg command: ffmpeg ${args.join( ' ' )}` );
 		return args;
-	}
-
-	public updateStreamAccess( streamId: string ): boolean {
-		const stream = this.streams.get( streamId );
-		if ( stream ) {
-			stream.lastAccess = Date.now();
-			return true;
-		}
-		return false;
 	}
 
 	private broadcastFrame( streamId: string, frame: Buffer ): void {
@@ -276,18 +258,6 @@ class StreamManager {
 		return false;
 	}
 
-	private cleanupInactiveStreams(): void {
-		const now = Date.now();
-		const timeout = 5 * 60 * 1000; // 5 minutes
-
-		for ( const [ streamId, stream, ] of this.streams ) {
-			if ( now - stream.lastAccess > timeout ) {
-				console.log( `🧹 Cleaning up inactive stream: ${streamId}` );
-				this.stopStream( streamId );
-			}
-		}
-	}
-
 	// TODO remove unused stuff
 	private cleanupStreamFiles( streamId: string ): void {
 		try {
@@ -301,8 +271,6 @@ class StreamManager {
 
 	public cleanup(): void {
 		console.log( '🧹 Cleaning up all streams...' );
-		
-		clearInterval( this.cleanupInterval );
 		
 		for ( const [ streamId, stream, ] of this.streams ) {
 			// Use platform-specific termination
@@ -330,8 +298,8 @@ class StreamManager {
 		return this.streams.get( streamId );
 	}
 
-	public generateStreamIdFromConfig( rtspUrl: string, quality: string ): string {
-		return this.generateStreamId( rtspUrl, quality );
+	public generateStreamIdFromConfig( rtspUrl: string, quality: string, clientId?: string ): string {
+		return this.generateStreamId( rtspUrl, quality, clientId );
 	}
 }
 
@@ -410,20 +378,20 @@ app.get( '/api/health', ( _req: Request, res: Response ) => {
 app.post( '/api/stream/start', ( req: Request, res: Response ) => {
 	try {
 		console.log( '📡 Received stream start request:', req.body );
-		const { rtspUrl, username, password, quality = 'medium', } = req.body;
+		const { rtspUrl, username, password, quality = 'medium', clientId, } = req.body;
 
 		if ( !rtspUrl ) {
 			console.log( '❌ No RTSP URL provided' );
 			return res.status( 400 ).json( { error: 'RTSP URL is required', } );
 		}
 
-		console.log( `📡 Starting stream for URL: ${rtspUrl}, quality: ${quality}` );
+		console.log( `📡 Starting stream for URL: ${rtspUrl}, quality: ${quality}, clientId: ${clientId}` );
 
 		// Get quality preset or use custom quality
 		const qualityConfig = QUALITY_PRESETS[quality] || QUALITY_PRESETS.medium;
 
 		// Generate stream ID
-		const streamId = streamManager.generateStreamIdFromConfig( rtspUrl, quality );
+		const streamId = streamManager.generateStreamIdFromConfig( rtspUrl, quality, clientId );
 		console.log( `📡 Generated stream ID: ${streamId}` );
 
 		// Configure stream
@@ -452,19 +420,6 @@ app.post( '/api/stream/start', ( req: Request, res: Response ) => {
 	} catch ( error ) {
 		console.error( 'Error starting stream:', error );
 		res.status( 500 ).json( { error: 'Internal server error', } );
-	}
-} );
-
-// Update stream access time (keep alive)
-app.post( '/api/stream/:streamId/keepalive', ( req: Request, res: Response ) => {
-	const { streamId, } = req.params;
-	
-	const updated = streamManager.updateStreamAccess( streamId );
-	
-	if ( updated ) {
-		res.json( { status: 'updated', } );
-	} else {
-		res.status( 404 ).json( { error: 'Stream not found', } );
 	}
 } );
 
@@ -622,9 +577,6 @@ app.get( '/api/stream/:streamId/mjpeg', ( req: Request, res: Response ) => {
 		stream.clients.delete( res );
 	} );
 
-	// Update access time
-	streamManager.updateStreamAccess( streamId );
-	
 	// Send initial boundary
 	res.write( '--ffserver\r\n' );
 } );

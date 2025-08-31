@@ -13,7 +13,7 @@ export class LiveCameraFeedTile extends BaseTile {
 	private errorContainer: HTMLElement | null = null;
 	private isStreaming: boolean = false;
 	private currentStreamId: string | null = null;
-	private keepAliveInterval: number | null = null;
+	private streamStarting: boolean = false; // Prevent concurrent stream starts
 
 	constructor(
 		tileId: string,
@@ -232,6 +232,10 @@ export class LiveCameraFeedTile extends BaseTile {
 
 	private selectCamera( index: number ): void {
 		if ( index === this.currentCameraIndex ) return;
+		if ( this.streamStarting ) {
+			console.log( `📹 Stream start already in progress, ignoring camera ${index}` );
+			return;
+		}
 
 		this.currentCameraIndex = index;
 		this.updateButtonStates();
@@ -287,19 +291,23 @@ export class LiveCameraFeedTile extends BaseTile {
 	}
 
 	private async startRTSPStream( camera: CameraStream ): Promise<void> {
+		if ( this.streamStarting ) return;
+		
 		try {
+			this.streamStarting = true;
+			
 			// Get quality setting from config or use default
 			const quality = this.cameraConfig.quality || 'medium';
 			
 			// Show loading state
 			this.element.classList.add( 'tile--loading' );
+			this.hideError();
 			
 			// Determine the correct server URL for API calls
 			const serverUrl = window.location.port === '3000' ? 'http://localhost:3012' : '';
 			const apiUrl = `${serverUrl}/api/stream/start`;
 			
 			console.log( `📹 Starting RTSP stream for: ${camera.title}` );
-			console.log( `📡 Making request to: ${apiUrl}` );
 			
 			// Request stream start from server
 			const response = await fetch( apiUrl, {
@@ -312,18 +320,13 @@ export class LiveCameraFeedTile extends BaseTile {
 					username: camera.username,
 					password: camera.password,
 					quality,
+					// Add a unique client ID to ensure unique streams per client
+					clientId: `${this.tileId}-${Date.now()}-${Math.random().toString( 36 ).substr( 2, 9 )}`,
 				} ),
 			} );
 
-			console.log( '📡 Server response status:', response.status );
-			console.log( '📡 Server response headers:', Object.fromEntries( response.headers.entries() ) );
-            
-
 			if ( !response.ok ) {
 				const responseText = await response.text();
-				console.error( '❌ Server error response:', responseText );
-				
-				// Try to parse as JSON, fall back to plain text
 				let errorMessage = 'Unknown error';
 				try {
 					const errorData = JSON.parse( responseText );
@@ -331,83 +334,24 @@ export class LiveCameraFeedTile extends BaseTile {
 				} catch {
 					errorMessage = responseText || `HTTP ${response.status}`;
 				}
-				
 				throw new Error( `Server error: ${response.status} - ${errorMessage}` );
 			}
 
 			const result = await response.json();
 			this.currentStreamId = result.streamId;
 			
-			console.log( '📹 Stream start result:', result );
+			console.log( `📹 Stream created with ID: ${result.streamId}` );
 			
-			// Build full MJPEG URL
-			const fullStreamUrl = `${serverUrl}${result.streamUrl}`;
-			console.log( `📹 Full Stream URL: ${fullStreamUrl}` );
+			// Build MJPEG URL and start playback immediately
+			const mjpegUrl = `${serverUrl}${result.streamUrl}`;
+			console.log( `� Connecting to MJPEG stream: ${mjpegUrl}` );
 
-			console.log( `📹 Started FFmpeg conversion for: ${result.streamId}` );
-
-			// Start keep-alive immediately to prevent cleanup
-			this.startKeepAlive();
-
-			// Wait for FFmpeg to start and generate initial segments
-			// Check if playlist file exists before trying to play
-			const maxWaitTime = 15000; // 15 seconds max wait
-			const checkInterval = 1000; // Check every second
-			let waitTime = 0;
-			
-			const waitForStream = async (): Promise<boolean> => {
-				try {
-					const streamUrl = `${serverUrl}${result.streamUrl}`;
-					console.log( `🔍 Checking stream availability: ${streamUrl}` );
-					const streamResponse = await fetch( streamUrl, { method: 'HEAD', } );
-					console.log( `🔍 Stream response status: ${streamResponse.status}` );
-					if ( streamResponse.ok ) {
-						console.log( `🔍 Stream is available` );
-					}
-					return streamResponse.ok;
-				} catch ( error ) {
-					console.log( `🔍 Stream check error:`, error );
-					return false;
-				}
-			};
-
-			// Wait for stream to be available
-			while ( waitTime < maxWaitTime ) {
-				if ( await waitForStream() ) {
-					break;
-				}
-				await new Promise( resolve => setTimeout( resolve, checkInterval ) );
-				waitTime += checkInterval;
-			}
-
-			if ( waitTime >= maxWaitTime ) {
-				throw new Error( 'Stream conversion timed out - FFmpeg may have failed to start' );
-			}
-
-			// Start MJPEG playback using image element
-			if ( this.imageElement ) {
-				const finalStreamUrl = `${serverUrl}${result.streamUrl}`;
-				console.log( `📹 Setting image source to: ${finalStreamUrl}` );
-				console.log( `📹 Image element:`, this.imageElement );
-				console.log( `📹 Video element display:`, this.videoElement?.style.display );
-				console.log( `📹 Image element display:`, this.imageElement.style.display );
-				
-				// Show the image element and hide video element
+			// Start MJPEG playback using image element - no waiting needed
+			if ( this.imageElement && this.currentStreamId === result.streamId ) {
 				this.showImageElement();
-				
-				console.log( `📹 After showImageElement - Video display:`, this.videoElement?.style.display );
-				console.log( `📹 After showImageElement - Image display:`, this.imageElement.style.display );
-				
-				// Set up loading state for image
-				this.element.classList.add( 'tile--loading' );
-				
-				this.imageElement.src = finalStreamUrl;
-				this.isStreaming = true;
-				
-				console.log( `📹 Image src set to:`, this.imageElement.src );
+				this.imageElement.src = mjpegUrl;
+				// The image load/error events will handle state updates
 			}
-
-			console.log( `📹 MJPEG stream ready: ${result.streamId}` );
 
 		} catch ( error ) {
 			console.error( `❌ Failed to start RTSP stream for camera ${camera.title}:`, error );
@@ -422,27 +366,9 @@ export class LiveCameraFeedTile extends BaseTile {
 					.catch( cleanupError => console.warn( 'Failed to cleanup failed stream:', cleanupError ) );
 				this.currentStreamId = null;
 			}
+		} finally {
+			this.streamStarting = false;
 		}
-	}
-
-	private startKeepAlive(): void {
-		if ( this.keepAliveInterval ) {
-			clearInterval( this.keepAliveInterval );
-		}
-
-		// Send keep-alive every 30 seconds
-		this.keepAliveInterval = window.setInterval( async () => {
-			if ( this.currentStreamId ) {
-				try {
-					const serverUrl = window.location.port === '3000' ? 'http://localhost:3012' : '';
-					await fetch( `${serverUrl}/api/stream/${this.currentStreamId}/keepalive`, {
-						method: 'POST',
-					} );
-				} catch ( error ) {
-					console.warn( `Keep-alive failed for stream ${this.currentStreamId}:`, error );
-				}
-			}
-		}, 30000 );
 	}
 
 	private stopStream(): void {
@@ -450,12 +376,6 @@ export class LiveCameraFeedTile extends BaseTile {
 
 		console.log( `⏹️ Stopping camera stream` );
 		
-		// Stop keep-alive interval
-		if ( this.keepAliveInterval ) {
-			clearInterval( this.keepAliveInterval );
-			this.keepAliveInterval = null;
-		}
-
 		// Stop server stream if it exists
 		if ( this.currentStreamId ) {
 			const serverUrl = window.location.port === '3000' ? 'http://localhost:3012' : '';
@@ -475,6 +395,7 @@ export class LiveCameraFeedTile extends BaseTile {
 		this.imageElement.style.display = 'none';
 		
 		this.isStreaming = false;
+		this.streamStarting = false; // Reset the flag
 		this.element.classList.remove( 'tile--loading' );
 	}
 
