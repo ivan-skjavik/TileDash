@@ -330,7 +330,8 @@ export class LiveCameraFeedTile extends BaseTile {
 			this.streamStarting = true;
 			
 			// Get quality setting from config or use default
-			const quality = ( this.config as LiveCameraFeedTileConfig ).quality || 'medium';
+			const cameraConfig = this.config as LiveCameraFeedTileConfig;
+			const quality = cameraConfig.quality || 'medium';
 			
 			// Show loading state
 			this.element.classList.add( 'tile--loading' );
@@ -342,7 +343,7 @@ export class LiveCameraFeedTile extends BaseTile {
 			
 			console.log( `📹 Starting RTSP stream for: ${camera.title}` );
 			
-			// Request stream start from server
+			// Request stream start from server with low-latency optimizations
 			const response = await fetch( apiUrl, {
 				method: 'POST',
 				headers: {
@@ -353,6 +354,12 @@ export class LiveCameraFeedTile extends BaseTile {
 					username: camera.username,
 					password: camera.password,
 					quality,
+					// Add low-latency mode flag
+					lowLatency: cameraConfig.lowLatencyMode !== false,
+					// Skip audio for better performance (default: true)
+					skipAudio: cameraConfig.skipAudio !== false,
+					// Custom keyframe interval
+					keyframeInterval: cameraConfig.keyframeInterval,
 					// Add a unique client ID to ensure unique streams per client
 					clientId: `${this.tileId}-${Date.now()}-${Math.random().toString( 36 ).substr( 2, 9 )}`,
 				} ),

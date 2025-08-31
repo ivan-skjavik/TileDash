@@ -105,7 +105,7 @@ export const appConfig: AppConfig = {
 							width: 5,
 							height: 4,
 							name: "Security Cameras",
-							quality: 'verylow',
+							quality: 'low',
 							cameras: [
 								{
 									title: "Stue",
@@ -130,6 +130,7 @@ export const appConfig: AppConfig = {
 							showNoneButton: true,
 							autoStart: false,
 							objectFit: 'cover',
+							lowLatencyMode: true, // Enable low-latency mode
 						} ),
 						// TileFactory.createConfig( 'SLIDER', {
 						// 	position: [ 0, 3, ],

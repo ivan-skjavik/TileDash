@@ -418,6 +418,12 @@ export interface LiveCameraFeedTileConfig extends BaseTileData {
   objectFit?: 'cover' | 'contain' | 'fill';
   /** Stream quality preset for RTSP conversion (default: 'medium') */
   quality?: 'ultralow' | 'verylow' | 'low' | 'medium' | 'high' | 'ultra';
+  /** Enable low-latency mode optimizations (default: true) */
+  lowLatencyMode?: boolean;
+  /** Skip audio stream for better performance (default: true) */
+  skipAudio?: boolean;
+  /** Keyframe interval in frames (default: fps/2 for 0.5s intervals) */
+  keyframeInterval?: number;
 }
 
 export type Tile = 

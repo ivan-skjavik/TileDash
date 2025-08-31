@@ -18,6 +18,7 @@ interface StreamQuality {
 	resolution: string;
 	bitrate: string;
 	fps: number;
+	keyframes?: number; // Keyframes per second (optional, defaults to fps/2)
 }
 
 interface StreamConfig {
@@ -25,26 +26,29 @@ interface StreamConfig {
 	username?: string;
 	password?: string;
 	quality: StreamQuality;
+	skipAudio?: boolean; // Whether to skip audio stream
 }
 
-// Default quality presets
+// Optimized quality presets for better streaming performance
 const QUALITY_PRESETS: Record<string, StreamQuality> = {
-	ultralow: { resolution: '320x240', bitrate: '200k', fps: 5, },
-	verylow: { resolution: '512x384', bitrate: '350k', fps: 10, },
-	low: { resolution: '640x480', bitrate: '500k', fps: 15, },
-	medium: { resolution: '1280x720', bitrate: '1500k', fps: 20, },
-	high: { resolution: '1920x1080', bitrate: '3000k', fps: 25, },
-	ultra: { resolution: '1920x1080', bitrate: '6000k', fps: 30, },
+	ultralow: { resolution: '384x216', bitrate: '150k', fps: 10, keyframes: 5, }, // 0.5s keyframe interval
+	verylow: { resolution: '512x288', bitrate: '250k', fps: 12, keyframes: 6, }, // 0.5s keyframe interval  
+	low: { resolution: '640x360', bitrate: '400k', fps: 15, keyframes: 2, }, // ~0.5s keyframe interval
+	medium: { resolution: '896x504', bitrate: '800k', fps: 20, keyframes: 10, }, // 0.5s keyframe interval
+	high: { resolution: '1280x720', bitrate: '1200k', fps: 24, keyframes: 12, }, // 0.5s keyframe interval
+	ultra: { resolution: '1920x1080', bitrate: '2500k', fps: 25, keyframes: 13, }, // ~0.5s keyframe interval
 };
 
-// Active streams management
+// Active streams management with hardware acceleration support
 class StreamManager {
 	private streams: Map<string, { process: ChildProcess; config: StreamConfig; clients: Set<Response> }> = new Map();
 	private streamDir: string;
+	private hwAccelSupport: { nvenc: boolean; qsv: boolean; vaapi: boolean } = { nvenc: false, qsv: false, vaapi: false };
 
 	constructor() {
 		this.streamDir = join( __dirname, '../public/streams' );
 		this.ensureStreamDirectory();
+		this.detectHardwareAcceleration();
 		
 		// Cleanup on process exit
 		process.on( 'exit', () => this.cleanup() );
@@ -55,6 +59,40 @@ class StreamManager {
 	private ensureStreamDirectory(): void {
 		if ( !existsSync( this.streamDir ) ) {
 			mkdirSync( this.streamDir, { recursive: true, } );
+		}
+	}
+
+	private detectHardwareAcceleration(): void {
+		// Check for NVIDIA NVENC support
+		try {
+			const nvencTest = spawn( 'ffmpeg', [ '-hide_banner', '-f', 'lavfi', '-i', 'testsrc=duration=1:size=320x240:rate=1', '-c:v', 'h264_nvenc', '-f', 'null', '-', ], { stdio: 'pipe', } );
+			nvencTest.on( 'close', ( code ) => {
+				this.hwAccelSupport.nvenc = code === 0;
+				if ( this.hwAccelSupport.nvenc ) {
+					console.log( '🚀 NVIDIA NVENC hardware acceleration available' );
+				}
+			} );
+			nvencTest.on( 'error', () => {
+				this.hwAccelSupport.nvenc = false;
+			} );
+		} catch {
+			this.hwAccelSupport.nvenc = false;
+		}
+
+		// Check for Intel QuickSync support  
+		try {
+			const qsvTest = spawn( 'ffmpeg', [ '-hide_banner', '-f', 'lavfi', '-i', 'testsrc=duration=1:size=320x240:rate=1', '-c:v', 'h264_qsv', '-f', 'null', '-', ], { stdio: 'pipe', } );
+			qsvTest.on( 'close', ( code ) => {
+				this.hwAccelSupport.qsv = code === 0;
+				if ( this.hwAccelSupport.qsv ) {
+					console.log( '🚀 Intel QuickSync hardware acceleration available' );
+				}
+			} );
+			qsvTest.on( 'error', () => {
+				this.hwAccelSupport.qsv = false;
+			} );
+		} catch {
+			this.hwAccelSupport.qsv = false;
 		}
 	}
 
@@ -88,7 +126,7 @@ class StreamManager {
 			console.log( `📹 Starting new FFmpeg stream: ${streamId}` );
 			
 			// Prepare FFmpeg arguments
-			const { rtspUrl, username, password, quality, } = config;
+			const { rtspUrl, username, password, quality, skipAudio, } = config;
 			
 			// Build RTSP URL with authentication if provided
 			let inputUrl = rtspUrl;
@@ -103,15 +141,36 @@ class StreamManager {
 
 			const args = [
 				'-rtsp_transport', 'tcp', // Force TCP for better reliability
+				'-fflags', '+genpts+discardcorrupt', // Better timestamp handling and error recovery
+				'-avoid_negative_ts', 'make_zero',
+				'-analyzeduration', '1000000', // Reduce analysis time (1 second)
+				'-probesize', '5000000', // Reduce probe size for faster startup
+				'-max_delay', '500000', // Reduce buffering delay (0.5 seconds)
 				'-i', inputUrl,
+			];
+
+			// Conditionally skip audio
+			if ( skipAudio !== false ) {
+				args.push( '-an' ); // Skip audio completely for better performance
+			}
+
+			args.push(
 				'-c:v', 'mjpeg',
-				'-q:v', '3', // MJPEG quality (2-31, lower is better)
+				'-q:v', '10', // MJPEG quality (2-31, lower is better)
+				// '-pix_fmt yuvj420p', // Uses the YUV 4:2:0 pixel format with JPEG-compatible color range (full 0–255). This is widely supported and ensures compatibility with most MJPEG decoders and players
+				// '-huffman optimal', // Optimizes Huffman tables for better compression efficiency, reducing frame size without sacrificing quality, which helps with lag in bandwidth-constrained setups.
 				'-s', quality.resolution,
 				'-r', quality.fps.toString(),
-				'-f', 'image2pipe',
-				'-vcodec', 'mjpeg',
-				'pipe:1', // Output to stdout
-			];
+				'-g', ( quality.keyframes || Math.max( 1, Math.floor( quality.fps / 2 ) ) ).toString(), // Keyframes per GOP
+				'-keyint_min', '1', // Minimum keyframe interval
+				'-preset', 'ultrafast', // Fastest encoding preset
+				'-tune', 'zerolatency', // Optimize for lowest latency
+				'-f', 'image2pipe', // ???
+				// '-vcodec', 'mjpeg',
+				'-flush_packets', '1', // Flush packets immediately
+				'-fflags', '+nobuffer', // Disable internal buffering
+				'pipe:1' // Output to stdout
+			);
 
 			console.log( `🚀 Spawning FFmpeg process with ${args.length} arguments` );
 			
@@ -122,10 +181,12 @@ class StreamManager {
 			
 			console.log( `🚀 FFmpeg process started with PID: ${ffmpegProcess.pid}` );
 			
-			// Buffer to collect MJPEG frames - create fresh buffer for each stream
+			// Optimized buffer to collect MJPEG frames - smaller initial size
 			let frameBuffer = Buffer.alloc( 0 );
 			const JPEG_START_MARKER = Buffer.from( [ 0xFF, 0xD8, ] ); // JPEG SOI marker
 			const JPEG_END_MARKER = Buffer.from( [ 0xFF, 0xD9, ] ); // JPEG EOI marker
+			const MAX_BUFFER_SIZE = 512 * 1024; // Reduced max buffer size to 512KB
+			const MAX_FRAME_SIZE = 256 * 1024; // Skip frames larger than 256KB
 			
 			// Handle stdout data (MJPEG frames)
 			ffmpegProcess.stdout?.on( 'data', ( data: Buffer ) => {
@@ -150,8 +211,13 @@ class StreamManager {
 					// Extract complete JPEG frame
 					const frame = frameBuffer.subarray( jpegStart, jpegEnd + 2 );
 					
-					// Broadcast frame to all clients
-					this.broadcastFrame( streamId, frame );
+					// Skip frames that are too large (likely corrupted)
+					if ( frame.length <= MAX_FRAME_SIZE ) {
+						// Broadcast frame to all clients
+						this.broadcastFrame( streamId, frame );
+					} else {
+						console.warn( `📹 Skipping oversized frame for stream ${streamId}: ${frame.length} bytes` );
+					}
 					
 					startIndex = jpegEnd + 2;
 				}
@@ -161,8 +227,8 @@ class StreamManager {
 					frameBuffer = frameBuffer.subarray( startIndex );
 				}
 				
-				// Prevent buffer from growing too large (clear if > 1MB)
-				if ( frameBuffer.length > 1024 * 1024 ) {
+				// Prevent buffer from growing too large (use smaller threshold)
+				if ( frameBuffer.length > MAX_BUFFER_SIZE ) {
 					console.warn( `📹 Clearing large frame buffer for stream ${streamId}: ${frameBuffer.length} bytes` );
 					frameBuffer = Buffer.alloc( 0 );
 				}
@@ -401,7 +467,7 @@ app.get( '/api/health', ( _req: Request, res: Response ) => {
 app.post( '/api/stream/start', ( req: Request, res: Response ) => {
 	try {
 		console.log( '📡 Received stream start request:', req.body );
-		const { rtspUrl, username, password, quality = 'medium', clientId, } = req.body;
+		const { rtspUrl, username, password, quality = 'medium', clientId, skipAudio, keyframeInterval, } = req.body;
 
 		if ( !rtspUrl ) {
 			console.log( '❌ No RTSP URL provided' );
@@ -413,6 +479,11 @@ app.post( '/api/stream/start', ( req: Request, res: Response ) => {
 		// Get quality preset or use custom quality
 		const qualityConfig = QUALITY_PRESETS[quality] || QUALITY_PRESETS.medium;
 
+		// Override keyframe setting if provided
+		if ( keyframeInterval && typeof keyframeInterval === 'number' && keyframeInterval > 0 ) {
+			qualityConfig.keyframes = keyframeInterval;
+		}
+
 		// Generate stream ID
 		const streamId = streamManager.generateStreamIdFromConfig( rtspUrl, quality );
 		console.log( `📡 Generated stream ID: ${streamId}` );
@@ -423,6 +494,7 @@ app.post( '/api/stream/start', ( req: Request, res: Response ) => {
 			username,
 			password,
 			quality: qualityConfig,
+			skipAudio: skipAudio !== false, // Default to true
 		};
 
 		// Start the stream
