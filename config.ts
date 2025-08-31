@@ -102,8 +102,8 @@ export const appConfig: AppConfig = {
 						} ),
 						TileFactory.createConfig( 'LIVE_CAMERA_FEED', {
 							position: [ 5, 0, ],
-							width: 4,
-							height: 3,
+							width: 5,
+							height: 4,
 							name: "Security Cameras",
 							cameras: [
 								{
