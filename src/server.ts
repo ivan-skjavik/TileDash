@@ -56,7 +56,7 @@ class StreamManager {
 		}
 	}
 
-	private generateStreamId( rtspUrl: string, quality: string ): string {
+	public generateStreamIdFromConfig( rtspUrl: string, quality: string ): string {
 		// Create a unique ID based on URL and quality - use crypto hash for better uniqueness
 		const baseString = `${rtspUrl}_${quality}`;
 		const hash = createHash( 'sha256' ).update( baseString ).digest( 'hex' ).substring( 0, 16 );
@@ -86,8 +86,31 @@ class StreamManager {
 			console.log( `📹 Starting new FFmpeg stream: ${streamId}` );
 			
 			// Prepare FFmpeg arguments
-			const args = this.buildFFmpegArgs( config );
+			const { rtspUrl, username, password, quality, } = config;
 			
+			// Build RTSP URL with authentication if provided
+			let inputUrl = rtspUrl;
+			if ( username && password ) {
+				const url = new URL( rtspUrl );
+				url.username = username;
+				url.password = password;
+				inputUrl = url.toString();
+			}
+
+			console.log( `🔧 FFmpeg input URL: ${inputUrl.replace( /:[^@]*@/, ':***@' )}` ); // Hide password in logs
+
+			const args = [
+				'-rtsp_transport', 'tcp', // Force TCP for better reliability
+				'-i', inputUrl,
+				'-c:v', 'mjpeg',
+				'-q:v', '3', // MJPEG quality (2-31, lower is better)
+				'-s', quality.resolution,
+				'-r', quality.fps.toString(),
+				'-f', 'image2pipe',
+				'-vcodec', 'mjpeg',
+				'pipe:1', // Output to stdout
+			];
+
 			console.log( `🚀 Spawning FFmpeg process with ${args.length} arguments` );
 			
 			// Start FFmpeg process
@@ -114,7 +137,6 @@ class StreamManager {
 				
 				// Look for complete JPEG frames
 				let startIndex = 0;
-				let frameCount = 0;
 				// eslint-disable-next-line no-constant-condition
 				while ( true ) {
 					const jpegStart = frameBuffer.indexOf( JPEG_START_MARKER, startIndex );
@@ -130,7 +152,6 @@ class StreamManager {
 					this.broadcastFrame( streamId, frame );
 					
 					startIndex = jpegEnd + 2;
-					frameCount++;
 				}
 				
 				// Keep remaining incomplete data, but limit buffer size to prevent memory issues
@@ -142,10 +163,6 @@ class StreamManager {
 				if ( frameBuffer.length > 1024 * 1024 ) {
 					console.warn( `📹 Clearing large frame buffer for stream ${streamId}: ${frameBuffer.length} bytes` );
 					frameBuffer = Buffer.alloc( 0 );
-				}
-				
-				if ( frameCount > 0 ) {
-					console.log( `📹 Processed ${frameCount} frames for stream ${streamId}` );
 				}
 			} );
 			
@@ -182,37 +199,6 @@ class StreamManager {
 			console.error( `❌ Failed to start stream internal ${streamId}:`, error );
 			return false;
 		}
-	}
-
-	private buildFFmpegArgs( config: StreamConfig ): string[] {
-		const { rtspUrl, username, password, quality, } = config;
-		
-		// Build RTSP URL with authentication if provided
-		let inputUrl = rtspUrl;
-		if ( username && password ) {
-			const url = new URL( rtspUrl );
-			url.username = username;
-			url.password = password;
-			inputUrl = url.toString();
-		}
-
-		console.log( `🔧 FFmpeg input URL: ${inputUrl.replace( /:[^@]*@/, ':***@' )}` ); // Hide password in logs
-		console.log( `🔧 FFmpeg output: MJPEG frames to stdout` );
-
-		const args = [
-			'-rtsp_transport', 'tcp', // Force TCP for better reliability
-			'-i', inputUrl,
-			'-c:v', 'mjpeg',
-			'-q:v', '3', // MJPEG quality (2-31, lower is better)
-			'-s', quality.resolution,
-			'-r', quality.fps.toString(),
-			'-f', 'image2pipe',
-			'-vcodec', 'mjpeg',
-			'pipe:1', // Output to stdout
-		];
-
-		console.log( `🔧 FFmpeg command: ffmpeg ${args.join( ' ' )}` );
-		return args;
 	}
 
 	private broadcastFrame( streamId: string, frame: Buffer ): void {
@@ -303,15 +289,9 @@ class StreamManager {
 		return false;
 	}
 
-	// TODO remove unused stuff
 	private cleanupStreamFiles( streamId: string ): void {
-		try {
-			// For MJPEG streaming, we don't need to clean up files since we're streaming directly
-			// Just log the cleanup for now
-			console.log( `🗑️ Cleaned up stream resources for: ${streamId}` );
-		} catch ( error ) {
-			console.error( `Error cleaning up stream files for ${streamId}:`, error );
-		}
+		// For MJPEG streaming, we don't need to clean up files since we're streaming directly
+		console.log( `🗑️ Cleaned up stream resources for: ${streamId}` );
 	}
 
 	public cleanup(): void {
@@ -341,10 +321,6 @@ class StreamManager {
 
 	public getStream( streamId: string ) {
 		return this.streams.get( streamId );
-	}
-
-	public generateStreamIdFromConfig( rtspUrl: string, quality: string, _clientId?: string ): string {
-		return this.generateStreamId( rtspUrl, quality );
 	}
 }
 
@@ -436,7 +412,7 @@ app.post( '/api/stream/start', ( req: Request, res: Response ) => {
 		const qualityConfig = QUALITY_PRESETS[quality] || QUALITY_PRESETS.medium;
 
 		// Generate stream ID
-		const streamId = streamManager.generateStreamIdFromConfig( rtspUrl, quality, clientId );
+		const streamId = streamManager.generateStreamIdFromConfig( rtspUrl, quality );
 		console.log( `📡 Generated stream ID: ${streamId}` );
 
 		// Configure stream

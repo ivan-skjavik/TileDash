@@ -105,6 +105,7 @@ export const appConfig: AppConfig = {
 							width: 5,
 							height: 4,
 							name: "Security Cameras",
+							quality: 'low',
 							cameras: [
 								{
 									title: "Stue",

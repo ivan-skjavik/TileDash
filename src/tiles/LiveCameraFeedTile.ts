@@ -25,16 +25,14 @@ export class LiveCameraFeedTile extends BaseTile {
 		super( tileId, devices, config, element, homeyApi );
 	}
 
-	protected get cameraConfig(): LiveCameraFeedTileConfig {
-		return this.config as LiveCameraFeedTileConfig;
-	}
-
 	render(): void {
 		this.element.innerHTML = '';
 		this.element.classList.add( 'live-camera-feed-tile' );
 
+		const cameraConfig = this.config as LiveCameraFeedTileConfig;
+		
 		// Validate configuration
-		if ( !this.cameraConfig.cameras || this.cameraConfig.cameras.length === 0 ) {
+		if ( !cameraConfig.cameras || cameraConfig.cameras.length === 0 ) {
 			this.renderError( 'No cameras configured' );
 			return;
 		}
@@ -50,7 +48,7 @@ export class LiveCameraFeedTile extends BaseTile {
 		// Title
 		const titleElement = document.createElement( 'div' );
 		titleElement.classList.add( 'tile-title' );
-		titleElement.textContent = this.cameraConfig.name || 'Live Camera Feed';
+		titleElement.textContent = cameraConfig.name || 'Live Camera Feed';
 
 		// Camera selection buttons
 		this.buttonContainer = document.createElement( 'div' );
@@ -58,7 +56,7 @@ export class LiveCameraFeedTile extends BaseTile {
 		this.createCameraButtons();
 
 		header.appendChild( titleElement );
-		if ( this.cameraConfig.showCameraButtons !== false ) {
+		if ( cameraConfig.showCameraButtons !== false ) {
 			header.appendChild( this.buttonContainer );
 		}
 
@@ -82,7 +80,7 @@ export class LiveCameraFeedTile extends BaseTile {
 		this.imageElement.classList.add( 'camera-video', 'camera-image' );
 		
 		// Apply object-fit style to both elements
-		const objectFit = this.cameraConfig.objectFit || 'cover';
+		const objectFit = cameraConfig.objectFit || 'cover';
 		this.videoElement.style.objectFit = objectFit;
 		this.imageElement.style.objectFit = objectFit;
 
@@ -103,7 +101,7 @@ export class LiveCameraFeedTile extends BaseTile {
 		this.element.appendChild( container );
 
 		// Auto-start first camera if enabled
-		if ( this.cameraConfig.autoStart !== false && this.cameraConfig.cameras.length > 0 ) {
+		if ( cameraConfig.autoStart !== false && cameraConfig.cameras.length > 0 ) {
 			this.selectCamera( 0 );
 		}
 	}
@@ -119,17 +117,18 @@ export class LiveCameraFeedTile extends BaseTile {
 	private createCameraButtons(): void {
 		if ( !this.buttonContainer ) return;
 
+		const cameraConfig = this.config as LiveCameraFeedTileConfig;
 		this.buttonContainer.innerHTML = '';
 
 		// Create "None" button if enabled
-		if ( this.cameraConfig.showNoneButton !== false ) {
+		if ( cameraConfig.showNoneButton !== false ) {
 			const noneButton = this.createButton( 'None', -1 );
 			noneButton.classList.add( 'none-button' );
 			this.buttonContainer.appendChild( noneButton );
 		}
 
 		// Create camera buttons
-		this.cameraConfig.cameras.forEach( ( camera, index ) => {
+		cameraConfig.cameras.forEach( ( camera: any, index: number ) => {
 			const button = this.createButton( camera.title, index );
 			this.buttonContainer!.appendChild( button );
 		} );
@@ -151,10 +150,11 @@ export class LiveCameraFeedTile extends BaseTile {
 	private updateButtonStates(): void {
 		if ( !this.buttonContainer ) return;
 
+		const cameraConfig = this.config as LiveCameraFeedTileConfig;
 		const buttons = this.buttonContainer.querySelectorAll( '.camera-button' );
 		buttons.forEach( ( button, buttonIndex ) => {
 			const isNoneButton = button.classList.contains( 'none-button' );
-			const cameraIndex = isNoneButton ? -1 : ( this.cameraConfig.showNoneButton !== false ? buttonIndex - 1 : buttonIndex );
+			const cameraIndex = isNoneButton ? -1 : ( cameraConfig.showNoneButton !== false ? buttonIndex - 1 : buttonIndex );
 			
 			if ( cameraIndex === this.currentCameraIndex ) {
 				button.classList.add( 'active' );
@@ -168,36 +168,31 @@ export class LiveCameraFeedTile extends BaseTile {
 		if ( !this.videoElement ) return;
 
 		this.videoElement.addEventListener( 'loadstart', () => {
-			console.log( `📹 Video loading started for camera ${this.currentCameraIndex}` );
 			this.hideError();
 			this.element.classList.add( 'tile--loading' );
 		} );
 
 		this.videoElement.addEventListener( 'loadeddata', () => {
-			console.log( `📹 Video data loaded for camera ${this.currentCameraIndex}` );
 			this.element.classList.remove( 'tile--loading' );
 			this.isStreaming = true;
 		} );
 
 		this.videoElement.addEventListener( 'error', ( event ) => {
-			console.error( `❌ Video error for camera ${this.currentCameraIndex}:`, event );
+			console.error( `Video error for camera ${this.currentCameraIndex}:`, event );
 			this.element.classList.remove( 'tile--loading' );
 			this.isStreaming = false;
 			this.showError( 'Failed to load camera stream' );
 		} );
 
 		this.videoElement.addEventListener( 'ended', () => {
-			console.log( `📹 Video ended for camera ${this.currentCameraIndex}` );
 			this.isStreaming = false;
 		} );
 
 		this.videoElement.addEventListener( 'pause', () => {
-			console.log( `⏸️ Video paused for camera ${this.currentCameraIndex}` );
 			this.isStreaming = false;
 		} );
 
 		this.videoElement.addEventListener( 'play', () => {
-			console.log( `▶️ Video playing for camera ${this.currentCameraIndex}` );
 			this.isStreaming = true;
 		} );
 	}
@@ -206,27 +201,16 @@ export class LiveCameraFeedTile extends BaseTile {
 		if ( !this.imageElement ) return;
 
 		this.imageElement.addEventListener( 'load', () => {
-			console.log( `📹 Image loaded for MJPEG camera ${this.currentCameraIndex}` );
-			console.log( `📹 Image dimensions: ${this.imageElement?.naturalWidth}x${this.imageElement?.naturalHeight}` );
 			this.element.classList.remove( 'tile--loading' );
 			this.isStreaming = true;
 			this.hideError();
 		} );
 
 		this.imageElement.addEventListener( 'error', ( event ) => {
-			console.error( `❌ Image error for MJPEG camera ${this.currentCameraIndex}:`, event );
-			console.error( `❌ Image src was:`, this.imageElement?.src );
+			console.error( `Image error for MJPEG camera ${this.currentCameraIndex}:`, event );
 			this.element.classList.remove( 'tile--loading' );
 			this.isStreaming = false;
 			this.showError( 'Failed to load MJPEG stream' );
-		} );
-
-		this.imageElement.addEventListener( 'loadstart', () => {
-			console.log( `📹 Image loadstart for MJPEG camera ${this.currentCameraIndex}` );
-		} );
-
-		this.imageElement.addEventListener( 'loadend', () => {
-			console.log( `📹 Image loadend for MJPEG camera ${this.currentCameraIndex}` );
 		} );
 	}
 
@@ -248,9 +232,9 @@ export class LiveCameraFeedTile extends BaseTile {
 				this.streamStarting = false;
 				this.hideError();
 			} );
-		} else if ( index >= 0 && index < this.cameraConfig.cameras.length ) {
+		} else if ( index >= 0 && index < ( this.config as LiveCameraFeedTileConfig ).cameras.length ) {
 			// Start streaming selected camera with proper sequencing
-			const camera = this.cameraConfig.cameras[index];
+			const camera = ( this.config as LiveCameraFeedTileConfig ).cameras[index];
 			this.switchStreamSequentially( camera );
 		}
 	}
@@ -261,7 +245,7 @@ export class LiveCameraFeedTile extends BaseTile {
 			await this.stopStreamWithDelay();
 			
 			// Step 2: Wait additional time for network cleanup
-			await this.delay( 500 );
+			await new Promise( resolve => setTimeout( resolve, 500 ) );
 			
 			// Step 3: Start new stream
 			await this.startStream( camera );
@@ -286,10 +270,6 @@ export class LiveCameraFeedTile extends BaseTile {
 		} );
 	}
 
-	private delay( ms: number ): Promise<void> {
-		return new Promise( resolve => setTimeout( resolve, ms ) );
-	}
-
 	private async startStream( camera: CameraStream ): Promise<void> {
 		if ( !this.videoElement || !this.imageElement ) return;
 
@@ -305,7 +285,10 @@ export class LiveCameraFeedTile extends BaseTile {
 				await this.startRTSPStream( camera );
 			} else {
 				// For HTTP/HLS streams, play directly in video element
-				this.showVideoElement();
+				if ( this.videoElement && this.imageElement ) {
+					this.videoElement.style.display = 'block';
+					this.imageElement.style.display = 'none';
+				}
 				this.videoElement.src = camera.rtspUrl;
 				this.videoElement.load();
 				
@@ -340,20 +323,6 @@ export class LiveCameraFeedTile extends BaseTile {
 		}
 	}
 
-	private showVideoElement(): void {
-		if ( this.videoElement && this.imageElement ) {
-			this.videoElement.style.display = 'block';
-			this.imageElement.style.display = 'none';
-		}
-	}
-
-	private showImageElement(): void {
-		if ( this.videoElement && this.imageElement ) {
-			this.videoElement.style.display = 'none';
-			this.imageElement.style.display = 'block';
-		}
-	}
-
 	private async startRTSPStream( camera: CameraStream ): Promise<void> {
 		if ( this.streamStarting ) return;
 		
@@ -361,7 +330,7 @@ export class LiveCameraFeedTile extends BaseTile {
 			this.streamStarting = true;
 			
 			// Get quality setting from config or use default
-			const quality = this.cameraConfig.quality || 'medium';
+			const quality = ( this.config as LiveCameraFeedTileConfig ).quality || 'medium';
 			
 			// Show loading state
 			this.element.classList.add( 'tile--loading' );
@@ -412,7 +381,10 @@ export class LiveCameraFeedTile extends BaseTile {
 
 			// Start MJPEG playback using image element
 			if ( this.imageElement && this.currentStreamId === result.streamId ) {
-				this.showImageElement();
+				if ( this.videoElement && this.imageElement ) {
+					this.videoElement.style.display = 'none';
+					this.imageElement.style.display = 'block';
+				}
 				console.log( `📡 Connecting to stream: ${mjpegUrl}` );
 				this.imageElement.src = mjpegUrl;
 				// The image load/error events will handle state updates
@@ -469,15 +441,6 @@ export class LiveCameraFeedTile extends BaseTile {
 		this.isStreaming = false;
 		this.streamStarting = false;
 		this.element.classList.remove( 'tile--loading' );
-		
-		// Force garbage collection hint for media elements
-		if ( 'gc' in window && typeof ( window as any ).gc === 'function' ) {
-			try {
-				( window as any ).gc();
-			} catch ( e ) {
-				// Ignore errors
-			}
-		}
 	}
 
 	private showError( message: string ): void {
@@ -511,11 +474,12 @@ export class LiveCameraFeedTile extends BaseTile {
 	 * Public method to switch to next camera
 	 */
 	public nextCamera(): void {
-		if ( this.cameraConfig.cameras.length === 0 ) return;
+		const cameraConfig = this.config as LiveCameraFeedTileConfig;
+		if ( cameraConfig.cameras.length === 0 ) return;
 		
 		let nextIndex = this.currentCameraIndex + 1;
-		if ( nextIndex >= this.cameraConfig.cameras.length ) {
-			nextIndex = this.cameraConfig.showNoneButton !== false ? -1 : 0;
+		if ( nextIndex >= cameraConfig.cameras.length ) {
+			nextIndex = cameraConfig.showNoneButton !== false ? -1 : 0;
 		}
 		this.selectCamera( nextIndex );
 	}
@@ -524,11 +488,12 @@ export class LiveCameraFeedTile extends BaseTile {
 	 * Public method to switch to previous camera
 	 */
 	public previousCamera(): void {
-		if ( this.cameraConfig.cameras.length === 0 ) return;
+		const cameraConfig = this.config as LiveCameraFeedTileConfig;
+		if ( cameraConfig.cameras.length === 0 ) return;
 		
 		let prevIndex = this.currentCameraIndex - 1;
-		if ( prevIndex < ( this.cameraConfig.showNoneButton !== false ? -1 : 0 ) ) {
-			prevIndex = this.cameraConfig.cameras.length - 1;
+		if ( prevIndex < ( cameraConfig.showNoneButton !== false ? -1 : 0 ) ) {
+			prevIndex = cameraConfig.cameras.length - 1;
 		}
 		this.selectCamera( prevIndex );
 	}
@@ -544,9 +509,10 @@ export class LiveCameraFeedTile extends BaseTile {
 	 * Public method to check if currently streaming
 	 */
 	public getStreamingStatus(): { isStreaming: boolean; currentCamera?: CameraStream; currentIndex: number } {
+		const cameraConfig = this.config as LiveCameraFeedTileConfig;
 		return {
 			isStreaming: this.isStreaming,
-			currentCamera: this.currentCameraIndex >= 0 ? this.cameraConfig.cameras[this.currentCameraIndex] : undefined,
+			currentCamera: this.currentCameraIndex >= 0 ? cameraConfig.cameras[this.currentCameraIndex] : undefined,
 			currentIndex: this.currentCameraIndex,
 		};
 	}
