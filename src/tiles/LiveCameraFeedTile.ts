@@ -68,7 +68,7 @@ export class LiveCameraFeedTile extends BaseTile {
 		this.errorContainer = document.createElement( 'div' );
 		this.errorContainer.classList.add( 'camera-error-container', 'hidden' );
 
-		// Create video element for non-RTSP streams or image element for MJPEG
+		// Create video element for non-RTSP streams or fMP4
 		this.videoElement = document.createElement( 'video' );
 		this.videoElement.classList.add( 'camera-video' );
 		this.videoElement.autoplay = true;
@@ -280,7 +280,7 @@ export class LiveCameraFeedTile extends BaseTile {
 		this.element.classList.add( 'tile--loading' );
 
 		try {
-			// For RTSP streams, use our server-side FFmpeg conversion (MJPEG output)
+			// For RTSP streams, use our server-side FFmpeg conversion
 			if ( camera.rtspUrl.startsWith( 'rtsp://' ) ) {
 				await this.startRTSPStream( camera );
 			} else {
@@ -332,6 +332,7 @@ export class LiveCameraFeedTile extends BaseTile {
 			// Get quality setting from config or use default
 			const cameraConfig = this.config as LiveCameraFeedTileConfig;
 			const quality = cameraConfig.quality || 'medium';
+			const outputFormat = cameraConfig.outputFormat || 'fmp4';
 			
 			// Show loading state
 			this.element.classList.add( 'tile--loading' );
@@ -341,7 +342,7 @@ export class LiveCameraFeedTile extends BaseTile {
 			const serverUrl = window.location.port === '3000' ? 'http://localhost:3012' : '';
 			const apiUrl = `${serverUrl}/api/stream/start`;
 			
-			console.log( `📹 Starting RTSP stream for: ${camera.title}` );
+			console.log( `📹 Starting RTSP stream for: ${camera.title} (format: ${outputFormat})` );
 			
 			// Request stream start from server with low-latency optimizations
 			const response = await fetch( apiUrl, {
@@ -354,6 +355,7 @@ export class LiveCameraFeedTile extends BaseTile {
 					username: camera.username,
 					password: camera.password,
 					quality,
+					outputFormat,
 					// Add low-latency mode flag
 					lowLatency: cameraConfig.lowLatencyMode !== false,
 					// Skip audio for better performance (default: true)
@@ -380,21 +382,18 @@ export class LiveCameraFeedTile extends BaseTile {
 			const result = await response.json();
 			this.currentStreamId = result.streamId;
 			
-			console.log( `📹 Stream created with ID: ${result.streamId}` );
+			console.log( `📹 Stream created with ID: ${result.streamId} (format: ${result.outputFormat})` );
 			
-			// Build MJPEG URL and start playback immediately
-			const mjpegUrl = `${serverUrl}${result.streamUrl}`;
-			console.log( `� Connecting to MJPEG stream: ${mjpegUrl}` );
+			// Build stream URL and start playback based on format
+			const streamUrl = `${serverUrl}${result.streamUrl}`;
+			console.log( `📡 Connecting to stream: ${streamUrl}` );
 
-			// Start MJPEG playback using image element
-			if ( this.imageElement && this.currentStreamId === result.streamId ) {
-				if ( this.videoElement && this.imageElement ) {
-					this.videoElement.style.display = 'none';
-					this.imageElement.style.display = 'block';
-				}
-				console.log( `📡 Connecting to stream: ${mjpegUrl}` );
-				this.imageElement.src = mjpegUrl;
-				// The image load/error events will handle state updates
+			if ( result.outputFormat === 'fmp4' ) {
+				// Use fMP4 + MSE for better performance
+				await this.startFMP4Stream( streamUrl );
+			} else {
+				// Use traditional MJPEG approach
+				await this.startMJPEGStream( streamUrl );
 			}
 
 		} catch ( error ) {
@@ -412,6 +411,192 @@ export class LiveCameraFeedTile extends BaseTile {
 			}
 		} finally {
 			this.streamStarting = false;
+		}
+	}
+
+	private async startFMP4Stream( streamUrl: string ): Promise<void> {
+		if ( !this.videoElement || !this.currentStreamId ) return;
+
+		console.log( `📹 Starting fMP4 stream with MSE: ${streamUrl}` );
+
+		// Show video element, hide image element
+		this.videoElement.style.display = 'block';
+		this.imageElement!.style.display = 'none';
+
+		try {
+			// Check MSE support
+			if ( !window.MediaSource ) {
+				throw new Error( 'MediaSource Extensions not supported' );
+			}
+
+			const mediaSource = new MediaSource();
+			this.videoElement.src = URL.createObjectURL( mediaSource );
+
+			await new Promise<void>( ( resolve, reject ) => {
+				const timeout = setTimeout( () => reject( new Error( 'MediaSource open timeout' ) ), 10000 );
+
+				mediaSource.addEventListener( 'sourceopen', async () => {
+					clearTimeout( timeout );
+					
+					try {
+						// Create source buffer for H.264 video
+						// Use baseline profile for maximum compatibility
+						const sourceBuffer = mediaSource.addSourceBuffer( 'video/mp4; codecs="avc1.42E01E"' );
+						
+						// Configure for live streaming
+						sourceBuffer.mode = 'segments';
+						
+						// Start fetching the stream
+						const response = await fetch( streamUrl );
+						if ( !response.ok ) {
+							throw new Error( `Failed to fetch stream: ${response.status}` );
+						}
+
+						const reader = response.body?.getReader();
+						if ( !reader ) {
+							throw new Error( 'Failed to get stream reader' );
+						}
+
+						let isAppending = false;
+						const bufferQueue: ArrayBuffer[] = [];
+
+						const appendNextBuffer = () => {
+							if ( isAppending || bufferQueue.length === 0 || sourceBuffer.updating ) {
+								return;
+							}
+
+							isAppending = true;
+							const buffer = bufferQueue.shift()!;
+							
+							try {
+								sourceBuffer.appendBuffer( buffer );
+							} catch ( error ) {
+								console.error( '📹 Error appending buffer:', error );
+								isAppending = false;
+								// Try to recover by clearing old buffers
+								if ( sourceBuffer.buffered.length > 0 ) {
+									const start = sourceBuffer.buffered.start( 0 );
+									const end = sourceBuffer.buffered.end( sourceBuffer.buffered.length - 1 );
+									if ( end - start > 10 ) { // Keep only last 10 seconds
+										sourceBuffer.remove( start, end - 10 );
+									}
+								}
+							}
+						};
+
+						sourceBuffer.addEventListener( 'updateend', () => {
+							isAppending = false;
+							appendNextBuffer();
+						} );
+
+						sourceBuffer.addEventListener( 'error', ( error ) => {
+							console.error( '📹 SourceBuffer error:', error );
+							isAppending = false;
+						} );
+
+						// Read stream data
+						const read = async (): Promise<void> => {
+							try {
+								const { done, value, } = await reader.read();
+								
+								if ( done || !this.currentStreamId ) {
+									console.log( '📹 fMP4 stream ended or stopped' );
+									return;
+								}
+
+								if ( value && value.length > 0 ) {
+									bufferQueue.push( value.buffer );
+									appendNextBuffer();
+								}
+
+								// Continue reading
+								read();
+							} catch ( error ) {
+								console.error( '📹 Error reading fMP4 stream:', error );
+								throw error;
+							}
+						};
+
+						read();
+						resolve();
+						
+					} catch ( error ) {
+						console.error( '📹 Error setting up MSE:', error );
+						reject( error );
+					}
+				} );
+
+				mediaSource.addEventListener( 'error', ( error ) => {
+					clearTimeout( timeout );
+					console.error( '📹 MediaSource error:', error );
+					reject( new Error( 'MediaSource failed' ) );
+				} );
+			} );
+
+			// Start playback
+			await this.videoElement.play();
+			console.log( '📹 fMP4 stream started successfully' );
+			
+		} catch ( error ) {
+			console.error( '📹 Failed to start fMP4 stream:', error );
+			// Fallback to MJPEG
+			console.log( '📹 Falling back to MJPEG stream' );
+			await this.fallbackToMJPEG();
+		}
+	}
+
+	private async startMJPEGStream( streamUrl: string ): Promise<void> {
+		if ( !this.imageElement || !this.currentStreamId ) return;
+
+		console.log( `📹 Starting MJPEG stream: ${streamUrl}` );
+
+		// Show image element, hide video element
+		this.imageElement.style.display = 'block';
+		this.videoElement!.style.display = 'none';
+
+		// Start MJPEG playback using image element
+		this.imageElement.src = streamUrl;
+		// The image load/error events will handle state updates
+	}
+
+	private async fallbackToMJPEG(): Promise<void> {
+		if ( !this.currentStreamId ) return;
+
+		try {
+			// Request MJPEG version of the same stream
+			const serverUrl = window.location.port === '3000' ? 'http://localhost:3012' : '';
+			const cameraConfig = this.config as LiveCameraFeedTileConfig;
+			const camera = cameraConfig.cameras[this.currentCameraIndex];
+			
+			// Stop current stream
+			await fetch( `${serverUrl}/api/stream/${this.currentStreamId}`, { method: 'DELETE', } );
+			
+			// Start MJPEG version
+			const response = await fetch( `${serverUrl}/api/stream/start`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', },
+				body: JSON.stringify( {
+					rtspUrl: camera.rtspUrl,
+					username: camera.username,
+					password: camera.password,
+					quality: cameraConfig.quality || 'medium',
+					outputFormat: 'mjpeg',
+					skipAudio: cameraConfig.skipAudio !== false,
+					clientId: `${this.tileId}-${Date.now()}-${Math.random().toString( 36 ).substr( 2, 9 )}`,
+				} ),
+			} );
+
+			if ( response.ok ) {
+				const result = await response.json();
+				this.currentStreamId = result.streamId;
+				const mjpegUrl = `${serverUrl}${result.streamUrl}`;
+				await this.startMJPEGStream( mjpegUrl );
+			} else {
+				throw new Error( 'Failed to start MJPEG fallback' );
+			}
+		} catch ( error ) {
+			console.error( '📹 Failed to fallback to MJPEG:', error );
+			this.showError( 'Failed to start video stream' );
 		}
 	}
 

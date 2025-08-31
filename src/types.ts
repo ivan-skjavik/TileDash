@@ -424,6 +424,8 @@ export interface LiveCameraFeedTileConfig extends BaseTileData {
   skipAudio?: boolean;
   /** Keyframe interval in frames (default: fps/2 for 0.5s intervals) */
   keyframeInterval?: number;
+  /** Output format for streaming (default: 'fmp4' for better performance) */
+  outputFormat?: 'mjpeg' | 'fmp4';
 }
 
 export type Tile = 

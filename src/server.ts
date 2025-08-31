@@ -27,6 +27,7 @@ interface StreamConfig {
 	password?: string;
 	quality: StreamQuality;
 	skipAudio?: boolean; // Whether to skip audio stream
+	outputFormat?: 'mjpeg' | 'fmp4'; // Output format for the stream
 }
 
 // Optimized quality presets for better streaming performance
@@ -43,7 +44,7 @@ const QUALITY_PRESETS: Record<string, StreamQuality> = {
 class StreamManager {
 	private streams: Map<string, { process: ChildProcess; config: StreamConfig; clients: Set<Response> }> = new Map();
 	private streamDir: string;
-	private hwAccelSupport: { nvenc: boolean; qsv: boolean; vaapi: boolean } = { nvenc: false, qsv: false, vaapi: false };
+	private hwAccelSupport: { nvenc: boolean; qsv: boolean; vaapi: boolean } = { nvenc: false, qsv: false, vaapi: false, };
 
 	constructor() {
 		this.streamDir = join( __dirname, '../public/streams' );
@@ -154,23 +155,36 @@ class StreamManager {
 				args.push( '-an' ); // Skip audio completely for better performance
 			}
 
-			args.push(
-				'-c:v', 'mjpeg',
-				'-q:v', '10', // MJPEG quality (2-31, lower is better)
-				// '-pix_fmt yuvj420p', // Uses the YUV 4:2:0 pixel format with JPEG-compatible color range (full 0–255). This is widely supported and ensures compatibility with most MJPEG decoders and players
-				// '-huffman optimal', // Optimizes Huffman tables for better compression efficiency, reducing frame size without sacrificing quality, which helps with lag in bandwidth-constrained setups.
-				'-s', quality.resolution,
-				'-r', quality.fps.toString(),
-				'-g', ( quality.keyframes || Math.max( 1, Math.floor( quality.fps / 2 ) ) ).toString(), // Keyframes per GOP
-				'-keyint_min', '1', // Minimum keyframe interval
-				'-preset', 'ultrafast', // Fastest encoding preset
-				'-tune', 'zerolatency', // Optimize for lowest latency
-				'-f', 'image2pipe', // ???
-				// '-vcodec', 'mjpeg',
-				'-flush_packets', '1', // Flush packets immediately
-				'-fflags', '+nobuffer', // Disable internal buffering
-				'pipe:1' // Output to stdout
-			);
+			// Add format-specific arguments based on output type
+			const outputFormat = config.outputFormat || 'mjpeg'; // Default to MJPEG for backwards compatibility
+			
+			if ( outputFormat === 'fmp4' ) {
+				// Fragmented MP4 for MSE (no transcoding, just remuxing)
+				args.push(
+					'-c:v', 'copy', // No transcoding! Just copy H.264 stream
+					'-f', 'mp4',
+					'-movflags', 'frag_keyframe+empty_moov+default_base_moof', // For live streaming
+					'-frag_duration', '1000000', // 1s fragments
+					'-reset_timestamps', '1', // Reset timestamps for live streaming
+					'pipe:1'
+				);
+			} else {
+				// MJPEG for backwards compatibility
+				args.push(
+					'-c:v', 'mjpeg',
+					'-q:v', '10', // MJPEG quality (2-31, lower is better)
+					'-s', quality.resolution,
+					'-r', quality.fps.toString(),
+					'-g', ( quality.keyframes || Math.max( 1, Math.floor( quality.fps / 2 ) ) ).toString(), // Keyframes per GOP
+					'-keyint_min', '1', // Minimum keyframe interval
+					'-preset', 'ultrafast', // Fastest encoding preset
+					'-tune', 'zerolatency', // Optimize for lowest latency
+					'-f', 'image2pipe',
+					'-flush_packets', '1', // Flush packets immediately
+					'-fflags', '+nobuffer', // Disable internal buffering
+					'pipe:1' // Output to stdout
+				);
+			}
 
 			console.log( `🚀 Spawning FFmpeg process with ${args.length} arguments` );
 			
@@ -188,51 +202,65 @@ class StreamManager {
 			const MAX_BUFFER_SIZE = 512 * 1024; // Reduced max buffer size to 512KB
 			const MAX_FRAME_SIZE = 256 * 1024; // Skip frames larger than 256KB
 			
-			// Handle stdout data (MJPEG frames)
-			ffmpegProcess.stdout?.on( 'data', ( data: Buffer ) => {
-				// Only process frames if stream still exists (prevents orphaned processing)
-				if ( !this.streams.has( streamId ) ) {
-					console.log( `📹 Ignoring data for stopped stream: ${streamId}` );
-					return;
-				}
-				
-				frameBuffer = Buffer.concat( [ frameBuffer, data, ] );
-				
-				// Look for complete JPEG frames
-				let startIndex = 0;
-				// eslint-disable-next-line no-constant-condition
-				while ( true ) {
-					const jpegStart = frameBuffer.indexOf( JPEG_START_MARKER, startIndex );
-					if ( jpegStart === -1 ) break;
-					
-					const jpegEnd = frameBuffer.indexOf( JPEG_END_MARKER, jpegStart + 2 );
-					if ( jpegEnd === -1 ) break;
-					
-					// Extract complete JPEG frame
-					const frame = frameBuffer.subarray( jpegStart, jpegEnd + 2 );
-					
-					// Skip frames that are too large (likely corrupted)
-					if ( frame.length <= MAX_FRAME_SIZE ) {
-						// Broadcast frame to all clients
-						this.broadcastFrame( streamId, frame );
-					} else {
-						console.warn( `📹 Skipping oversized frame for stream ${streamId}: ${frame.length} bytes` );
+			// Handle stdout data based on output format
+			if ( config.outputFormat === 'fmp4' ) {
+				// For fMP4, stream raw MP4 fragments directly
+				ffmpegProcess.stdout?.on( 'data', ( data: Buffer ) => {
+					if ( !this.streams.has( streamId ) ) {
+						console.log( `📹 Ignoring fMP4 data for stopped stream: ${streamId}` );
+						return;
 					}
 					
-					startIndex = jpegEnd + 2;
-				}
-				
-				// Keep remaining incomplete data, but limit buffer size to prevent memory issues
-				if ( startIndex > 0 ) {
-					frameBuffer = frameBuffer.subarray( startIndex );
-				}
-				
-				// Prevent buffer from growing too large (use smaller threshold)
-				if ( frameBuffer.length > MAX_BUFFER_SIZE ) {
-					console.warn( `📹 Clearing large frame buffer for stream ${streamId}: ${frameBuffer.length} bytes` );
-					frameBuffer = Buffer.alloc( 0 );
-				}
-			} );
+					// Send raw MP4 data to all clients
+					this.broadcastMP4Data( streamId, data );
+				} );
+			} else {
+				// Handle MJPEG frames (existing logic)
+				ffmpegProcess.stdout?.on( 'data', ( data: Buffer ) => {
+					// Only process frames if stream still exists (prevents orphaned processing)
+					if ( !this.streams.has( streamId ) ) {
+						console.log( `📹 Ignoring data for stopped stream: ${streamId}` );
+						return;
+					}
+					
+					frameBuffer = Buffer.concat( [ frameBuffer, data, ] );
+					
+					// Look for complete JPEG frames
+					let startIndex = 0;
+					// eslint-disable-next-line no-constant-condition
+					while ( true ) {
+						const jpegStart = frameBuffer.indexOf( JPEG_START_MARKER, startIndex );
+						if ( jpegStart === -1 ) break;
+						
+						const jpegEnd = frameBuffer.indexOf( JPEG_END_MARKER, jpegStart + 2 );
+						if ( jpegEnd === -1 ) break;
+						
+						// Extract complete JPEG frame
+						const frame = frameBuffer.subarray( jpegStart, jpegEnd + 2 );
+						
+						// Skip frames that are too large (likely corrupted)
+						if ( frame.length <= MAX_FRAME_SIZE ) {
+							// Broadcast frame to all clients
+							this.broadcastFrame( streamId, frame );
+						} else {
+							console.warn( `📹 Skipping oversized frame for stream ${streamId}: ${frame.length} bytes` );
+						}
+						
+						startIndex = jpegEnd + 2;
+					}
+					
+					// Keep remaining incomplete data, but limit buffer size to prevent memory issues
+					if ( startIndex > 0 ) {
+						frameBuffer = frameBuffer.subarray( startIndex );
+					}
+					
+					// Prevent buffer from growing too large (use smaller threshold)
+					if ( frameBuffer.length > MAX_BUFFER_SIZE ) {
+						console.warn( `📹 Clearing large frame buffer for stream ${streamId}: ${frameBuffer.length} bytes` );
+						frameBuffer = Buffer.alloc( 0 );
+					}
+				} );
+			}
 			
 			// Handle process events
 			ffmpegProcess.stderr?.on( 'data', ( data ) => {
@@ -297,6 +325,32 @@ class StreamManager {
 				}
 			} catch ( error ) {
 				console.log( `📺 Error sending frame to client: ${error}` );
+				disconnectedClients.push( client );
+			}
+		}
+
+		// Remove disconnected clients
+		disconnectedClients.forEach( client => stream.clients.delete( client ) );
+	}
+
+	private broadcastMP4Data( streamId: string, data: Buffer ): void {
+		const stream = this.streams.get( streamId );
+		if ( !stream || stream.clients.size === 0 ) {
+			return;
+		}
+
+		// Send raw MP4 data to all connected clients
+		const disconnectedClients: Response[] = [];
+		
+		for ( const client of stream.clients ) {
+			try {
+				if ( !client.destroyed ) {
+					client.write( data );
+				} else {
+					disconnectedClients.push( client );
+				}
+			} catch ( error ) {
+				console.log( `📺 Error sending MP4 data to client: ${error}` );
 				disconnectedClients.push( client );
 			}
 		}
@@ -467,14 +521,14 @@ app.get( '/api/health', ( _req: Request, res: Response ) => {
 app.post( '/api/stream/start', ( req: Request, res: Response ) => {
 	try {
 		console.log( '📡 Received stream start request:', req.body );
-		const { rtspUrl, username, password, quality = 'medium', clientId, skipAudio, keyframeInterval, } = req.body;
+		const { rtspUrl, username, password, quality = 'medium', clientId, skipAudio, keyframeInterval, outputFormat = 'mjpeg', } = req.body;
 
 		if ( !rtspUrl ) {
 			console.log( '❌ No RTSP URL provided' );
 			return res.status( 400 ).json( { error: 'RTSP URL is required', } );
 		}
 
-		console.log( `📡 Starting stream for URL: ${rtspUrl}, quality: ${quality}, clientId: ${clientId}` );
+		console.log( `📡 Starting stream for URL: ${rtspUrl}, quality: ${quality}, format: ${outputFormat}, clientId: ${clientId}` );
 
 		// Get quality preset or use custom quality
 		const qualityConfig = QUALITY_PRESETS[quality] || QUALITY_PRESETS.medium;
@@ -484,8 +538,8 @@ app.post( '/api/stream/start', ( req: Request, res: Response ) => {
 			qualityConfig.keyframes = keyframeInterval;
 		}
 
-		// Generate stream ID
-		const streamId = streamManager.generateStreamIdFromConfig( rtspUrl, quality );
+		// Generate stream ID (include format in ID for differentiation)
+		const streamId = streamManager.generateStreamIdFromConfig( rtspUrl, `${quality}_${outputFormat}` );
 		console.log( `📡 Generated stream ID: ${streamId}` );
 
 		// Configure stream
@@ -495,16 +549,22 @@ app.post( '/api/stream/start', ( req: Request, res: Response ) => {
 			password,
 			quality: qualityConfig,
 			skipAudio: skipAudio !== false, // Default to true
+			outputFormat: outputFormat as 'mjpeg' | 'fmp4',
 		};
 
 		// Start the stream
 		const success = streamManager.startStream( streamId, streamConfig );
 
 		if ( success ) {
+			const streamUrl = outputFormat === 'fmp4' 
+				? `/api/stream/${streamId}/fmp4`
+				: `/api/stream/${streamId}/mjpeg`;
+				
 			const result = {
 				streamId,
-				streamUrl: `/api/stream/${streamId}/mjpeg`,
+				streamUrl,
 				quality: qualityConfig,
+				outputFormat,
 			};
 			console.log( `✅ Stream started successfully:`, result );
 			res.json( result );
@@ -729,6 +789,70 @@ app.get( '/api/stream/:streamId/mjpeg', ( req: Request, res: Response ) => {
 		console.log( `📺 Failed to send initial boundary for client ${clientId} on stream ${streamId}:`, error );
 		handleDisconnect( `initial write error: ${error}` );
 	}
+} );
+
+// fMP4 streaming endpoint for MSE
+app.get( '/api/stream/:streamId/fmp4', ( req: Request, res: Response ) => {
+	const { streamId, } = req.params;
+	
+	const stream = streamManager.getStream( streamId );
+	if ( !stream ) {
+		return res.status( 404 ).json( { error: 'Stream not found', } );
+	}
+
+	const clientId = `client_${Date.now()}_${Math.random().toString( 36 ).substr( 2, 9 )}`;
+	console.log( `📺 New fMP4 client ${clientId} connected for stream: ${streamId} (total clients: ${stream.clients.size + 1})` );
+
+	// Set fMP4 response headers for MSE
+	res.setHeader( 'Content-Type', 'video/mp4' );
+	res.setHeader( 'Cache-Control', 'no-cache, no-store, must-revalidate' );
+	res.setHeader( 'Pragma', 'no-cache' );
+	res.setHeader( 'Expires', '0' );
+	res.setHeader( 'Access-Control-Allow-Origin', '*' );
+	res.setHeader( 'Connection', 'close' );
+
+	// Add client to the stream's client list
+	stream.clients.add( res );
+
+	// Enhanced client disconnect handling
+	const handleDisconnect = ( reason: string ) => {
+		const currentStream = streamManager.getStream( streamId );
+		if ( currentStream ) {
+			currentStream.clients.delete( res );
+			console.log( `📺 fMP4 client ${clientId} disconnected from stream: ${streamId} (reason: ${reason}) (remaining: ${currentStream.clients.size})` );
+			
+			// Only stop the stream if no clients remain after a grace period
+			if ( currentStream.clients.size === 0 ) {
+				console.log( `📺 No clients left for stream ${streamId}, scheduling cleanup in 30 seconds...` );
+				setTimeout( () => {
+					const finalStream = streamManager.getStream( streamId );
+					if ( finalStream && finalStream.clients.size === 0 ) {
+						console.log( `📺 Stopping unused stream ${streamId}` );
+						streamManager.stopStream( streamId );
+					}
+				}, 30000 ); // 30 second grace period
+			}
+		} else {
+			console.log( `📺 fMP4 client ${clientId} disconnected from already-stopped stream: ${streamId}` );
+		}
+	};
+
+	// Handle various disconnect scenarios
+	req.on( 'close', () => handleDisconnect( 'connection close' ) );
+	req.on( 'end', () => handleDisconnect( 'connection end' ) );
+	req.on( 'error', ( error ) => {
+		console.log( `📺 fMP4 client ${clientId} error for stream ${streamId}:`, error );
+		handleDisconnect( `connection error: ${error.message}` );
+	} );
+
+	// Handle response errors
+	res.on( 'error', ( error ) => {
+		console.log( `📺 fMP4 response error for client ${clientId} on stream ${streamId}:`, error );
+		handleDisconnect( `response error: ${error.message}` );
+	} );
+
+	res.on( 'close', () => handleDisconnect( 'response close' ) );
+	res.on( 'finish', () => handleDisconnect( 'response finish' ) );
 } );
 
 // Serve main HTML file for all non-API, non-HLS routes
