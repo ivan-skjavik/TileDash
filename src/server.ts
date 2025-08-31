@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { spawn, ChildProcess } from 'child_process';
 import { existsSync, mkdirSync } from 'fs';
+import { createHash } from 'crypto';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -56,11 +57,10 @@ class StreamManager {
 	}
 
 	private generateStreamId( rtspUrl: string, quality: string ): string {
-		// Create a unique ID based on URL and quality only - multiple clients can share the same stream
+		// Create a unique ID based on URL and quality - use crypto hash for better uniqueness
 		const baseString = `${rtspUrl}_${quality}`;
-		const hash = Buffer.from( baseString ).toString( 'base64' )
-			.replace( /[/+=]/g, '' )
-			.substring( 0, 20 );
+		const hash = createHash( 'sha256' ).update( baseString ).digest( 'hex' ).substring( 0, 16 );
+		console.log( `🔑 Generated stream ID: ${hash} for ${rtspUrl} (${quality})` );
 		return hash;
 	}
 
@@ -618,7 +618,8 @@ app.get( '/api/stream/:streamId/mjpeg', ( req: Request, res: Response ) => {
 		return res.status( 404 ).json( { error: 'Stream not found', } );
 	}
 
-	console.log( `📺 New MJPEG client connected for stream: ${streamId} (total clients: ${stream.clients.size + 1})` );
+	const clientId = `client_${Date.now()}_${Math.random().toString( 36 ).substr( 2, 9 )}`;
+	console.log( `📺 New MJPEG client ${clientId} connected for stream: ${streamId} (total clients: ${stream.clients.size + 1})` );
 
 	// Set MJPEG response headers
 	res.setHeader( 'Content-Type', 'multipart/x-mixed-replace; boundary=ffserver' );
@@ -631,12 +632,12 @@ app.get( '/api/stream/:streamId/mjpeg', ( req: Request, res: Response ) => {
 	// Add client to the stream's client list
 	stream.clients.add( res );
 
-	// Handle client disconnect
-	req.on( 'close', () => {
+	// Enhanced client disconnect handling
+	const handleDisconnect = ( reason: string ) => {
 		const currentStream = streamManager.getStream( streamId );
 		if ( currentStream ) {
 			currentStream.clients.delete( res );
-			console.log( `📺 MJPEG client disconnected from stream: ${streamId} (remaining clients: ${currentStream.clients.size})` );
+			console.log( `📺 MJPEG client ${clientId} disconnected from stream: ${streamId} (reason: ${reason}) (remaining: ${currentStream.clients.size})` );
 			
 			// Only stop the stream if no clients remain after a grace period
 			if ( currentStream.clients.size === 0 ) {
@@ -650,33 +651,33 @@ app.get( '/api/stream/:streamId/mjpeg', ( req: Request, res: Response ) => {
 				}, 30000 ); // 30 second grace period
 			}
 		} else {
-			console.log( `📺 MJPEG client disconnected from already-stopped stream: ${streamId}` );
+			console.log( `📺 MJPEG client ${clientId} disconnected from already-stopped stream: ${streamId}` );
 		}
-	} );
+	};
 
+	// Handle various disconnect scenarios
+	req.on( 'close', () => handleDisconnect( 'connection close' ) );
+	req.on( 'end', () => handleDisconnect( 'connection end' ) );
 	req.on( 'error', ( error ) => {
-		console.log( `📺 MJPEG client error for stream ${streamId}:`, error );
-		const currentStream = streamManager.getStream( streamId );
-		if ( currentStream ) {
-			currentStream.clients.delete( res );
-		}
+		console.log( `📺 MJPEG client ${clientId} error for stream ${streamId}:`, error );
+		handleDisconnect( `connection error: ${error.message}` );
 	} );
 
 	// Handle response errors
 	res.on( 'error', ( error ) => {
-		console.log( `📺 MJPEG response error for stream ${streamId}:`, error );
-		const currentStream = streamManager.getStream( streamId );
-		if ( currentStream ) {
-			currentStream.clients.delete( res );
-		}
+		console.log( `📺 MJPEG response error for client ${clientId} on stream ${streamId}:`, error );
+		handleDisconnect( `response error: ${error.message}` );
 	} );
+
+	res.on( 'close', () => handleDisconnect( 'response close' ) );
+	res.on( 'finish', () => handleDisconnect( 'response finish' ) );
 
 	// Send initial boundary
 	try {
 		res.write( '--ffserver\r\n' );
 	} catch ( error ) {
-		console.log( `📺 Failed to send initial boundary for stream ${streamId}:`, error );
-		stream.clients.delete( res );
+		console.log( `📺 Failed to send initial boundary for client ${clientId} on stream ${streamId}:`, error );
+		handleDisconnect( `initial write error: ${error}` );
 	}
 } );
 
