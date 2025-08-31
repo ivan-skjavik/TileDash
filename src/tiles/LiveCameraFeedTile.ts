@@ -273,11 +273,16 @@ export class LiveCameraFeedTile extends BaseTile {
 		}
 	}
 
-	private async stopStreamWithDelay(): Promise<void> {
+	private async stopStreamWithDelay( delay = 300 ): Promise<void> {
 		return new Promise( ( resolve ) => {
+			console.log( `⏸️ Stopping stream with delay for cleanup...` );
 			this.stopStream();
 			// Give time for server cleanup and network resources to be released
-			setTimeout( resolve, 1000 );
+			// This delay is important for MJPEG connections to fully close
+			setTimeout( () => {
+				console.log( `⏸️ Stream stop delay complete, ready for new stream` );
+				resolve();
+			}, delay );
 		} );
 	}
 
@@ -405,9 +410,10 @@ export class LiveCameraFeedTile extends BaseTile {
 			const mjpegUrl = `${serverUrl}${result.streamUrl}`;
 			console.log( `� Connecting to MJPEG stream: ${mjpegUrl}` );
 
-			// Start MJPEG playback using image element - no waiting needed
+			// Start MJPEG playback using image element
 			if ( this.imageElement && this.currentStreamId === result.streamId ) {
 				this.showImageElement();
+				console.log( `📡 Connecting to stream: ${mjpegUrl}` );
 				this.imageElement.src = mjpegUrl;
 				// The image load/error events will handle state updates
 			}
@@ -435,8 +441,13 @@ export class LiveCameraFeedTile extends BaseTile {
 
 		console.log( `⏹️ Stopping camera stream (current: ${this.currentStreamId})` );
 		
-		// NOTE: We don't call DELETE on server stream anymore since other clients might be using it
-		// The server will automatically clean up unused streams after a timeout period
+		// Signal to server that we're disconnecting to help with client tracking
+		if ( this.currentStreamId ) {
+			const serverUrl = window.location.port === '3000' ? 'http://localhost:3012' : '';
+			fetch( `${serverUrl}/api/stream/${this.currentStreamId}/disconnect`, { 
+				method: 'POST',
+			} ).catch( error => console.warn( `Failed to signal disconnect for stream ${this.currentStreamId}:`, error ) );
+		}
 		
 		// Clear all media sources and reset state
 		this.videoElement.pause();
@@ -444,8 +455,9 @@ export class LiveCameraFeedTile extends BaseTile {
 		this.videoElement.removeAttribute( 'src' );
 		this.videoElement.load();
 		
-		// For image element, clear source and add timestamp to prevent caching
-		this.imageElement.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+		// For image element, use a simple approach to disconnect
+		// Setting src to empty string should close the MJPEG connection
+		this.imageElement.src = '';
 		this.imageElement.removeAttribute( 'src' );
 		
 		// Hide both elements
