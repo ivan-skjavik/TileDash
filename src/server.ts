@@ -55,25 +55,22 @@ class StreamManager {
 		}
 	}
 
-	private generateStreamId( rtspUrl: string, quality: string, clientId?: string ): string {
-		// Create a unique ID based on URL, quality, timestamp, and optional client ID for per-client streams
-		const timestamp = Date.now().toString();
-		const baseString = clientId ? `${rtspUrl}_${quality}_${clientId}_${timestamp}` : `${rtspUrl}_${quality}_${timestamp}`;
+	private generateStreamId( rtspUrl: string, quality: string ): string {
+		// Create a unique ID based on URL and quality only - multiple clients can share the same stream
+		const baseString = `${rtspUrl}_${quality}`;
 		const hash = Buffer.from( baseString ).toString( 'base64' )
 			.replace( /[/+=]/g, '' )
-			.substring( 0, 24 ); // Longer ID to reduce collisions
+			.substring( 0, 20 );
 		return hash;
 	}
 
 	public startStream( streamId: string, config: StreamConfig ): boolean {
 		try {
-			// Always create a new stream to avoid frame mixing between clients
-			// If a stream with this ID exists, it means something went wrong, so stop it first
-			if ( this.streams.has( streamId ) ) {
-				console.log( `⚠️  Stream ID collision detected, stopping existing stream: ${streamId}` );
-				this.stopStream( streamId );
-				// Wait a bit for cleanup to complete
-				setTimeout( () => this.startStreamInternal( streamId, config ), 1000 );
+			// Check if stream already exists and is healthy
+			const existingStream = this.streams.get( streamId );
+			if ( existingStream ) {
+				console.log( `📹 Stream ${streamId} already exists, reusing for new client` );
+				// Stream already exists and is running - new clients will connect to existing stream
 				return true;
 			}
 
@@ -346,8 +343,8 @@ class StreamManager {
 		return this.streams.get( streamId );
 	}
 
-	public generateStreamIdFromConfig( rtspUrl: string, quality: string, clientId?: string ): string {
-		return this.generateStreamId( rtspUrl, quality, clientId );
+	public generateStreamIdFromConfig( rtspUrl: string, quality: string, _clientId?: string ): string {
+		return this.generateStreamId( rtspUrl, quality );
 	}
 }
 
@@ -484,6 +481,25 @@ app.delete( '/api/stream/:streamId', ( req: Request, res: Response ) => {
 	}
 } );
 
+// Disconnect a client from a stream (but don't necessarily stop the stream)
+app.post( '/api/stream/:streamId/disconnect', ( req: Request, res: Response ) => {
+	const { streamId, } = req.params;
+	
+	const stream = streamManager.getStream( streamId );
+	if ( !stream ) {
+		return res.status( 404 ).json( { error: 'Stream not found', } );
+	}
+	
+	// This endpoint allows clients to signal they're disconnecting
+	// The actual disconnect happens when the MJPEG connection closes
+	console.log( `📺 Client signaled disconnect from stream: ${streamId}` );
+	
+	res.json( { 
+		status: 'disconnect_acknowledged', 
+		remainingClients: stream.clients.size,
+	} );
+} );
+
 // List active streams
 app.get( '/api/streams', ( _req: Request, res: Response ) => {
 	const activeStreams = streamManager.getActiveStreams();
@@ -602,7 +618,7 @@ app.get( '/api/stream/:streamId/mjpeg', ( req: Request, res: Response ) => {
 		return res.status( 404 ).json( { error: 'Stream not found', } );
 	}
 
-	console.log( `📺 New MJPEG client connected for stream: ${streamId}` );
+	console.log( `📺 New MJPEG client connected for stream: ${streamId} (total clients: ${stream.clients.size + 1})` );
 
 	// Set MJPEG response headers
 	res.setHeader( 'Content-Type', 'multipart/x-mixed-replace; boundary=ffserver' );
@@ -617,28 +633,42 @@ app.get( '/api/stream/:streamId/mjpeg', ( req: Request, res: Response ) => {
 
 	// Handle client disconnect
 	req.on( 'close', () => {
-		console.log( `📺 MJPEG client disconnected from stream: ${streamId}` );
-		stream.clients.delete( res );
-		
-		// If no more clients, consider stopping the stream after a delay
-		setTimeout( () => {
-			const currentStream = streamManager.getStream( streamId );
-			if ( currentStream && currentStream.clients.size === 0 ) {
-				console.log( `📺 No clients left for stream ${streamId}, stopping...` );
-				streamManager.stopStream( streamId );
+		const currentStream = streamManager.getStream( streamId );
+		if ( currentStream ) {
+			currentStream.clients.delete( res );
+			console.log( `📺 MJPEG client disconnected from stream: ${streamId} (remaining clients: ${currentStream.clients.size})` );
+			
+			// Only stop the stream if no clients remain after a grace period
+			if ( currentStream.clients.size === 0 ) {
+				console.log( `📺 No clients left for stream ${streamId}, scheduling cleanup in 30 seconds...` );
+				setTimeout( () => {
+					const finalStream = streamManager.getStream( streamId );
+					if ( finalStream && finalStream.clients.size === 0 ) {
+						console.log( `📺 Stopping unused stream ${streamId}` );
+						streamManager.stopStream( streamId );
+					}
+				}, 30000 ); // 30 second grace period
 			}
-		}, 30000 ); // 30 second grace period
+		} else {
+			console.log( `📺 MJPEG client disconnected from already-stopped stream: ${streamId}` );
+		}
 	} );
 
 	req.on( 'error', ( error ) => {
 		console.log( `📺 MJPEG client error for stream ${streamId}:`, error );
-		stream.clients.delete( res );
+		const currentStream = streamManager.getStream( streamId );
+		if ( currentStream ) {
+			currentStream.clients.delete( res );
+		}
 	} );
 
 	// Handle response errors
 	res.on( 'error', ( error ) => {
 		console.log( `📺 MJPEG response error for stream ${streamId}:`, error );
-		stream.clients.delete( res );
+		const currentStream = streamManager.getStream( streamId );
+		if ( currentStream ) {
+			currentStream.clients.delete( res );
+		}
 	} );
 
 	// Send initial boundary

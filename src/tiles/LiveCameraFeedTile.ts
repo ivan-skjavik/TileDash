@@ -435,13 +435,8 @@ export class LiveCameraFeedTile extends BaseTile {
 
 		console.log( `⏹️ Stopping camera stream (current: ${this.currentStreamId})` );
 		
-		// Stop server stream if it exists
-		if ( this.currentStreamId ) {
-			const serverUrl = window.location.port === '3000' ? 'http://localhost:3012' : '';
-			fetch( `${serverUrl}/api/stream/${this.currentStreamId}`, { 
-				method: 'DELETE',
-			} ).catch( error => console.warn( `Failed to stop server stream ${this.currentStreamId}:`, error ) );
-		}
+		// NOTE: We don't call DELETE on server stream anymore since other clients might be using it
+		// The server will automatically clean up unused streams after a timeout period
 		
 		// Clear all media sources and reset state
 		this.videoElement.pause();
@@ -546,6 +541,8 @@ export class LiveCameraFeedTile extends BaseTile {
 
 	public cleanup(): void {
 		super.cleanup();
+		// When cleaning up the tile, we should disconnect from the stream
+		// but let the server decide if it should stop based on remaining clients
 		this.stopStream();
 	}
 }
