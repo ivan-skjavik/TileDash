@@ -237,42 +237,101 @@ export class LiveCameraFeedTile extends BaseTile {
 			return;
 		}
 
+		// Set transitioning state to prevent concurrent operations
+		this.streamStarting = true;
 		this.currentCameraIndex = index;
 		this.updateButtonStates();
 
 		if ( index === -1 ) {
-			// Stop streaming
-			this.stopStream();
-			this.hideError();
+			// Stop streaming and wait for cleanup
+			this.stopStreamWithDelay().finally( () => {
+				this.streamStarting = false;
+				this.hideError();
+			} );
 		} else if ( index >= 0 && index < this.cameraConfig.cameras.length ) {
-			// Start streaming selected camera
+			// Start streaming selected camera with proper sequencing
 			const camera = this.cameraConfig.cameras[index];
-			this.startStream( camera );
+			this.switchStreamSequentially( camera );
 		}
 	}
 
-	private startStream( camera: CameraStream ): void {
+	private async switchStreamSequentially( camera: CameraStream ): Promise<void> {
+		try {
+			// Step 1: Stop current stream and wait for cleanup
+			await this.stopStreamWithDelay();
+			
+			// Step 2: Wait additional time for network cleanup
+			await this.delay( 500 );
+			
+			// Step 3: Start new stream
+			await this.startStream( camera );
+		} catch ( error ) {
+			console.error( `❌ Failed to switch to camera ${camera.title}:`, error );
+			this.showError( `Failed to switch to ${camera.title}` );
+		} finally {
+			this.streamStarting = false;
+		}
+	}
+
+	private async stopStreamWithDelay(): Promise<void> {
+		return new Promise( ( resolve ) => {
+			this.stopStream();
+			// Give time for server cleanup and network resources to be released
+			setTimeout( resolve, 1000 );
+		} );
+	}
+
+	private delay( ms: number ): Promise<void> {
+		return new Promise( resolve => setTimeout( resolve, ms ) );
+	}
+
+	private async startStream( camera: CameraStream ): Promise<void> {
 		if ( !this.videoElement || !this.imageElement ) return;
 
 		console.log( `📹 Starting stream for camera: ${camera.title}` );
 		
-		this.stopStream(); // Stop any existing stream
+		// Ensure clean state before starting
 		this.hideError();
+		this.element.classList.add( 'tile--loading' );
 
 		try {
 			// For RTSP streams, use our server-side FFmpeg conversion (MJPEG output)
 			if ( camera.rtspUrl.startsWith( 'rtsp://' ) ) {
-				this.startRTSPStream( camera );
+				await this.startRTSPStream( camera );
 			} else {
 				// For HTTP/HLS streams, play directly in video element
 				this.showVideoElement();
 				this.videoElement.src = camera.rtspUrl;
 				this.videoElement.load();
+				
+				// Wait for video to be ready
+				await new Promise<void>( ( resolve, reject ) => {
+					const timeout = setTimeout( () => reject( new Error( 'Video load timeout' ) ), 10000 );
+					
+					const onLoad = () => {
+						clearTimeout( timeout );
+						this.videoElement?.removeEventListener( 'loadeddata', onLoad );
+						this.videoElement?.removeEventListener( 'error', onError );
+						resolve();
+					};
+					
+					const onError = ( _event: Event ) => {
+						clearTimeout( timeout );
+						this.videoElement?.removeEventListener( 'loadeddata', onLoad );
+						this.videoElement?.removeEventListener( 'error', onError );
+						reject( new Error( 'Video failed to load' ) );
+					};
+					
+					this.videoElement?.addEventListener( 'loadeddata', onLoad );
+					this.videoElement?.addEventListener( 'error', onError );
+				} );
 			}
 			
 		} catch ( error ) {
 			console.error( `❌ Failed to start stream for camera ${camera.title}:`, error );
 			this.showError( `Failed to connect to ${camera.title}` );
+			this.element.classList.remove( 'tile--loading' );
+			throw error;
 		}
 	}
 
@@ -374,29 +433,44 @@ export class LiveCameraFeedTile extends BaseTile {
 	private stopStream(): void {
 		if ( !this.videoElement || !this.imageElement ) return;
 
-		console.log( `⏹️ Stopping camera stream` );
+		console.log( `⏹️ Stopping camera stream (current: ${this.currentStreamId})` );
 		
 		// Stop server stream if it exists
 		if ( this.currentStreamId ) {
 			const serverUrl = window.location.port === '3000' ? 'http://localhost:3012' : '';
-			fetch( `${serverUrl}/api/stream/${this.currentStreamId}`, { method: 'DELETE', } )
-				.catch( error => console.warn( `Failed to stop server stream ${this.currentStreamId}:`, error ) );
-			this.currentStreamId = null;
+			fetch( `${serverUrl}/api/stream/${this.currentStreamId}`, { 
+				method: 'DELETE',
+			} ).catch( error => console.warn( `Failed to stop server stream ${this.currentStreamId}:`, error ) );
 		}
 		
-		// Clear both video and image sources
+		// Clear all media sources and reset state
 		this.videoElement.pause();
 		this.videoElement.src = '';
+		this.videoElement.removeAttribute( 'src' );
 		this.videoElement.load();
-		this.imageElement.src = '';
+		
+		// For image element, clear source and add timestamp to prevent caching
+		this.imageElement.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+		this.imageElement.removeAttribute( 'src' );
 		
 		// Hide both elements
 		this.videoElement.style.display = 'none';
 		this.imageElement.style.display = 'none';
 		
+		// Reset all state
+		this.currentStreamId = null;
 		this.isStreaming = false;
-		this.streamStarting = false; // Reset the flag
+		this.streamStarting = false;
 		this.element.classList.remove( 'tile--loading' );
+		
+		// Force garbage collection hint for media elements
+		if ( 'gc' in window && typeof ( window as any ).gc === 'function' ) {
+			try {
+				( window as any ).gc();
+			} catch ( e ) {
+				// Ignore errors
+			}
+		}
 	}
 
 	private showError( message: string ): void {

@@ -56,11 +56,12 @@ class StreamManager {
 	}
 
 	private generateStreamId( rtspUrl: string, quality: string, clientId?: string ): string {
-		// Create a unique ID based on URL, quality, and optional client ID for per-client streams
-		const baseString = clientId ? `${rtspUrl}_${quality}_${clientId}` : `${rtspUrl}_${quality}`;
+		// Create a unique ID based on URL, quality, timestamp, and optional client ID for per-client streams
+		const timestamp = Date.now().toString();
+		const baseString = clientId ? `${rtspUrl}_${quality}_${clientId}_${timestamp}` : `${rtspUrl}_${quality}_${timestamp}`;
 		const hash = Buffer.from( baseString ).toString( 'base64' )
 			.replace( /[/+=]/g, '' )
-			.substring( 0, 20 ); // Slightly longer to reduce collisions
+			.substring( 0, 24 ); // Longer ID to reduce collisions
 		return hash;
 	}
 
@@ -71,8 +72,20 @@ class StreamManager {
 			if ( this.streams.has( streamId ) ) {
 				console.log( `⚠️  Stream ID collision detected, stopping existing stream: ${streamId}` );
 				this.stopStream( streamId );
+				// Wait a bit for cleanup to complete
+				setTimeout( () => this.startStreamInternal( streamId, config ), 1000 );
+				return true;
 			}
 
+			return this.startStreamInternal( streamId, config );
+		} catch ( error ) {
+			console.error( `❌ Failed to start stream ${streamId}:`, error );
+			return false;
+		}
+	}
+
+	private startStreamInternal( streamId: string, config: StreamConfig ): boolean {
+		try {
 			console.log( `📹 Starting new FFmpeg stream: ${streamId}` );
 			
 			// Prepare FFmpeg arguments
@@ -87,17 +100,24 @@ class StreamManager {
 			
 			console.log( `🚀 FFmpeg process started with PID: ${ffmpegProcess.pid}` );
 			
-			// Buffer to collect MJPEG frames
+			// Buffer to collect MJPEG frames - create fresh buffer for each stream
 			let frameBuffer = Buffer.alloc( 0 );
 			const JPEG_START_MARKER = Buffer.from( [ 0xFF, 0xD8, ] ); // JPEG SOI marker
 			const JPEG_END_MARKER = Buffer.from( [ 0xFF, 0xD9, ] ); // JPEG EOI marker
 			
 			// Handle stdout data (MJPEG frames)
 			ffmpegProcess.stdout?.on( 'data', ( data: Buffer ) => {
+				// Only process frames if stream still exists (prevents orphaned processing)
+				if ( !this.streams.has( streamId ) ) {
+					console.log( `📹 Ignoring data for stopped stream: ${streamId}` );
+					return;
+				}
+				
 				frameBuffer = Buffer.concat( [ frameBuffer, data, ] );
 				
 				// Look for complete JPEG frames
 				let startIndex = 0;
+				let frameCount = 0;
 				// eslint-disable-next-line no-constant-condition
 				while ( true ) {
 					const jpegStart = frameBuffer.indexOf( JPEG_START_MARKER, startIndex );
@@ -113,11 +133,22 @@ class StreamManager {
 					this.broadcastFrame( streamId, frame );
 					
 					startIndex = jpegEnd + 2;
+					frameCount++;
 				}
 				
-				// Keep remaining incomplete data
+				// Keep remaining incomplete data, but limit buffer size to prevent memory issues
 				if ( startIndex > 0 ) {
 					frameBuffer = frameBuffer.subarray( startIndex );
+				}
+				
+				// Prevent buffer from growing too large (clear if > 1MB)
+				if ( frameBuffer.length > 1024 * 1024 ) {
+					console.warn( `📹 Clearing large frame buffer for stream ${streamId}: ${frameBuffer.length} bytes` );
+					frameBuffer = Buffer.alloc( 0 );
+				}
+				
+				if ( frameCount > 0 ) {
+					console.log( `📹 Processed ${frameCount} frames for stream ${streamId}` );
 				}
 			} );
 			
@@ -125,7 +156,7 @@ class StreamManager {
 			ffmpegProcess.stderr?.on( 'data', ( data ) => {
 				const output = data.toString();
 				// Only log important messages to reduce noise
-				if ( output.includes( 'error' ) || output.includes( 'failed' ) || output.includes( 'Connection' ) ) {
+				if ( output.includes( 'error' ) || output.includes( 'failed' ) || output.includes( 'Connection' ) || output.includes( 'Stream #' ) ) {
 					console.log( `📺 FFmpeg stderr ${streamId}: ${output.trim()}` );
 				}
 			} );
@@ -151,7 +182,7 @@ class StreamManager {
 
 			return true;
 		} catch ( error ) {
-			console.error( `❌ Failed to start stream ${streamId}:`, error );
+			console.error( `❌ Failed to start stream internal ${streamId}:`, error );
 			return false;
 		}
 	}
@@ -228,30 +259,47 @@ class StreamManager {
 		if ( stream ) {
 			console.log( `⏹️ Stopping stream: ${streamId}` );
 			
-			// Close all client connections
+			// Close all client connections first
 			for ( const client of stream.clients ) {
 				try {
-					client.end();
+					if ( !client.destroyed ) {
+						client.end();
+					}
 				} catch ( error ) {
 					// Ignore errors when closing client connections
 				}
 			}
 			stream.clients.clear();
 			
-			// Try graceful shutdown first, then force kill on Windows
-			if ( process.platform === 'win32' ) {
-				try {
-					// On Windows, use taskkill for reliable process termination
-					spawn( 'taskkill', [ '/pid', stream.process.pid!.toString(), '/T', '/F', ] );
-				} catch ( error ) {
-					console.warn( `Failed to use taskkill, trying SIGTERM:`, error );
+			// Remove from active streams to prevent new frame processing
+			this.streams.delete( streamId );
+			
+			// Terminate FFmpeg process with platform-specific approach
+			if ( stream.process && !stream.process.killed ) {
+				if ( process.platform === 'win32' ) {
+					try {
+						// On Windows, use taskkill for reliable process termination
+						const killProcess = spawn( 'taskkill', [ '/pid', stream.process.pid!.toString(), '/T', '/F', ] );
+						killProcess.on( 'error', ( error ) => {
+							console.warn( `Failed to use taskkill for ${streamId}, trying SIGTERM:`, error );
+							stream.process.kill( 'SIGTERM' );
+						} );
+					} catch ( error ) {
+						console.warn( `Failed to spawn taskkill for ${streamId}, trying SIGTERM:`, error );
+						stream.process.kill( 'SIGTERM' );
+					}
+				} else {
+					// On Unix-like systems, use SIGTERM followed by SIGKILL if needed
 					stream.process.kill( 'SIGTERM' );
+					setTimeout( () => {
+						if ( stream.process && !stream.process.killed ) {
+							console.warn( `Force killing stubborn process for stream ${streamId}` );
+							stream.process.kill( 'SIGKILL' );
+						}
+					}, 5000 );
 				}
-			} else {
-				stream.process.kill( 'SIGTERM' );
 			}
 			
-			this.streams.delete( streamId );
 			this.cleanupStreamFiles( streamId );
 			return true;
 		}
@@ -571,14 +619,35 @@ app.get( '/api/stream/:streamId/mjpeg', ( req: Request, res: Response ) => {
 	req.on( 'close', () => {
 		console.log( `📺 MJPEG client disconnected from stream: ${streamId}` );
 		stream.clients.delete( res );
+		
+		// If no more clients, consider stopping the stream after a delay
+		setTimeout( () => {
+			const currentStream = streamManager.getStream( streamId );
+			if ( currentStream && currentStream.clients.size === 0 ) {
+				console.log( `📺 No clients left for stream ${streamId}, stopping...` );
+				streamManager.stopStream( streamId );
+			}
+		}, 30000 ); // 30 second grace period
 	} );
 
-	req.on( 'error', () => {
+	req.on( 'error', ( error ) => {
+		console.log( `📺 MJPEG client error for stream ${streamId}:`, error );
+		stream.clients.delete( res );
+	} );
+
+	// Handle response errors
+	res.on( 'error', ( error ) => {
+		console.log( `📺 MJPEG response error for stream ${streamId}:`, error );
 		stream.clients.delete( res );
 	} );
 
 	// Send initial boundary
-	res.write( '--ffserver\r\n' );
+	try {
+		res.write( '--ffserver\r\n' );
+	} catch ( error ) {
+		console.log( `📺 Failed to send initial boundary for stream ${streamId}:`, error );
+		stream.clients.delete( res );
+	}
 } );
 
 // Serve main HTML file for all non-API, non-HLS routes
